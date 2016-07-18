@@ -1,0 +1,144 @@
+<?php
+/**
+ * @file
+ * Code for the FR Panels feature.
+ */
+
+include_once 'fr_panels.features.inc';
+
+/**
+ * Define a subtype for each node type.
+ */
+function ctools_node_content_type_content_types($plugin) {
+  $ctools_content_types = array();
+
+  // Add an existing node.
+  // TODO: rename this content type and move to fr_content_report module with the rest of functions.
+  $ctools_content_types['existing_node'] = array(
+    'title' => t('Select report'),
+    'add form' => array(
+      'ctools_node_content_type_selection_form' => array(
+        'default' => TRUE,
+        'title' => t('Choose an existing content'),
+      ),
+    ),
+    'edit form' => 'no_context_content_type_edit_form',
+    'single' => TRUE,
+    'top level' => TRUE,
+    'category' => array(t('Content')),
+  );
+
+  return $ctools_content_types;
+}
+
+/**
+ * Selection form for existing nodes.
+ */
+function ctools_node_content_type_selection_form($form, &$form_state) {
+  if (isset($form_state['display']->context['panelizer']->data)) {
+    $node = $form_state['display']->context['panelizer']->data;
+    $gid = $node->og_group_ref[LANGUAGE_NONE][0]['target_id'];
+  }
+  else {
+    $gid = NULL;
+  }
+
+
+  // add a default view as form prefix for selecting the content
+  // get the view name from a variable, to make it possible to provide a
+  // different view
+  $view_name = variable_get('fr_panels_selection_view', 'node_pane_selection_report');
+  $form['#prefix'] = views_embed_view($view_name, 'default', $gid);
+  if (!empty($form['#prefix'])) {
+    // Switch from text input element to hidden.
+    $form['selected_nid'] = array(
+      '#type' => 'hidden',
+      '#default_value' => 1,
+    );
+    // Attach JavaScript behaviour for the node selection links.
+    $form['#attached']['js'] = array(
+      drupal_get_path('module', 'fr_panels') . '/js/fr_panels.node_selector.js',
+    );
+  }
+  else {
+    $form['selected_nid'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Select NID'),
+      '#default_value' => '',
+      '#required' => TRUE,
+    );
+  }
+
+  // Hide "Override title" form elements.
+  $form['override_title']['#access'] = FALSE;
+  $form['override_title_text']['#access'] = FALSE;
+  $form['override_title_heading']['#access'] = FALSE;
+  $form['override_title_markup']['#access'] = FALSE;
+
+  // Hide "Cancel" button.
+  $form['buttons']['cancel']['#access'] = FALSE;
+
+  // Hide "Finish" button.
+  $form['buttons']['return']['#attributes'] = array(
+    'style' => 'display: none;',
+  );
+
+  // TODO: Add validation so user would be unable to select node outside his group.
+  $form['#submit'][] = 'fr_panels_content_type_selection_form_return_submit';
+
+  return $form;
+}
+
+function fr_panels_content_type_selection_form_return_submit(&$form, &$form_state) {
+  $form_state['conf']['nid'] = $form_state['values']['selected_nid'];
+  $form_state['conf']['build_mode'] = 'full';
+}
+
+/**
+ * Remove buttons to edit and style panel panes.
+ */
+function fr_panels_preprocess_panels_ipe_pane_wrapper(&$vars) {
+  if (isset($vars['links']['edit'])) {
+    unset($vars['links']['edit']);
+  }
+
+  if (isset($vars['links']['style'])) {
+    unset($vars['links']['style']);
+  }
+}
+
+/**
+ * Remove button to edit style of panel regions.
+ */
+function fr_panels_preprocess_panels_ipe_add_pane_button(&$vars) {
+  if (isset($vars['links']['style'])) {
+    unset($vars['links']['style']);
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function fr_panels_form_panels_ipe_edit_control_form_alter(&$form, &$form_state, $form_id) {
+  // Simplify panels toolbar.
+  $form['buttons']['submit']['#value'] = t('Save');
+  $form['buttons']['save_default']['#access'] = FALSE;
+}
+
+/**
+ * Implements hook_menu_alter().
+ */
+function fr_panels_menu_alter(&$items) {
+  // Hide panelizer tab.
+  $panelizer_items = array(
+    'node/%node/panelizer',
+    'node/%node/panelizer/page_manager/layout',
+    'node/%node/panelizer/page_manager/content',
+  );
+  foreach ($panelizer_items as $item) {
+    if (isset($items[$item])) {
+      $items[$item]['access callback'] = 'user_access';
+      $items[$item]['access arguments'] = array('administer panelizer');
+    }
+  }
+}

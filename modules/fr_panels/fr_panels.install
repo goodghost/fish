@@ -1,0 +1,19 @@
+<?php
+/**
+ * @file
+ * Install, update and uninstall functions for the fr_panels module.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function fr_panels_install() {
+  // Set weight after panelizer module.
+  db_update('system')
+    ->fields(array(
+      'weight' => 22,
+    ))
+    ->condition('type', 'module')
+    ->condition('name', 'fr_panels')
+    ->execute();
+}

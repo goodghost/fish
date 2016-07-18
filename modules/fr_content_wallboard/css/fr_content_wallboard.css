@@ -1,0 +1,16 @@
+/* Icon for "Add Wallboard" menu item */
+.navbar-icon-wallboard:before, .navbar-icon-wallboards:before {
+  content: "\f108" !important;
+}
+
+/* Styles for dashboard selection widget */
+div.ctools-modal-content .views-field-entityreference-view-widget .form-item label {
+  width: auto;
+  float: none;
+  display: inline;
+}
+
+div.ctools-modal-content .views-field-entityreference-view-widget .form-item .form-checkbox {
+  margin-right: 7px;
+  float: left;
+}

@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the fr content dashboard block feature.
+ */
+
+include_once 'fr_content_dashboard_block.features.inc';

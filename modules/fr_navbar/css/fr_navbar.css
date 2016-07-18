@@ -1,0 +1,32 @@
+/*
+ * Navbar menu customizations.
+ */
+
+/* Show scroll */
+#navbar-administration.navbar-oriented .navbar-tray-vertical > .navbar-lining:before {
+  display: none;
+}
+
+#navbar-administration .navbar-tray-vertical {
+  box-shadow: 0 0 7px gray;
+}
+
+body.environment-prod #navbar-bar {
+  background-image: url(../images/live.gif);
+  background-position: 99% 50%;
+}
+
+#navbar-administration .navbar-bar .navbar-user-picture img {
+  width: 25px;
+  height: 25px;
+  pointer-events: none;
+  position: absolute;
+  left: 8px;
+  top: 22px;
+  border-radius: 100%;
+}
+
+#navbar-administration.navbar-oriented .navbar-bar .navbar-tab.navbar-tab.navbar-tab--right {
+  float: right;
+}
+

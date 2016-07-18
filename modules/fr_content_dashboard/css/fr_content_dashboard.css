@@ -1,0 +1,34 @@
+/* Icon for "Dashboards" menu item */
+.navbar-icon-dashboards:before {
+  content: "\f0e4" !important;
+}
+
+.node-type-dashboard .panels-ipe-dragbar-admin-title {
+  display: none;
+}
+
+
+/* Styles for IPE buttons */
+
+.node-type-dashboard div.panels-ipe-handlebar-wrapper li a span,
+.node-type-dashboard div.panels-ipe-newblock a span {
+  height: auto;
+  width: auto;
+  text-indent: initial;
+  padding-left: 20px;
+}
+
+.node-type-dashboard div.panels-ipe-newblock a span {
+  background-position: -9px 50%;
+}
+
+.node-type-dashboard div.panels-ipe-handlebar-wrapper li.delete a span {
+  background-position: 0 50%;
+}
+
+
+/* Styles for table displaying reports when adding new content to dashboards */
+
+.view-node-pane-selection-report table.views-table {
+  font-size: 1em;
+}

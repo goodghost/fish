@@ -1,0 +1,63 @@
+
+.panel-2col { 
+/*  overflow: hidden;  */
+}
+
+.panel-2col .panel-col-first .inside { 
+  margin: 0 .5em 1em 0;
+}
+
+.panel-2col .panel-col-last { 
+  float: left; 
+  width: 50%; 
+}
+* html .panel-2col .panel-col-last {
+  width: 49.9%;
+}
+
+.panel-2col .panel-col-last .inside { 
+  margin: 0 0 1em .5em;
+}
+
+#panels-edit-display .panel-pane,
+#panels-edit-display .helperclass {
+  margin: .5em;
+}
+
+.panel-2col .panel-separator {
+  margin: 0 0 1em 0;
+}
+
+.panel-top-left,
+.panel-top-right,
+.panel-bottom-left,
+.panel-bottom-right { 
+  float: left; 
+  width: 45%;
+  padding: 2.5%; 
+  margin-right: 5%;
+}
+
+.panel-dashboard .first-row,
+.panel-dashboard .second-row {
+  height: 50%;
+}
+
+.panel-dashboard .panel-panel {
+  height: 90%;
+  overflow: auto;
+}
+
+.page-node-panelizer-page-manager .panel-dashboard .panel-panel {
+  overflow: visible;
+}
+
+.page-node-panelizer-page-manager .panel-top-left,
+.page-node-panelizer-page-manager .panel-top-right,
+.page-node-panelizer-page-manager .panel-bottom-left,
+.page-node-panelizer-page-manager .panel-bottom-right {
+  float: left;
+  width: 50%;
+  padding: 0;
+  margin: 0;
+}

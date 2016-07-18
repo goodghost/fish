@@ -1,0 +1,17 @@
+<?php
+/**
+ * @file
+ * Code for the FR Groups feature.
+ */
+
+include_once 'fr_groups.features.inc';
+
+/**
+ * Implements hook_field_widget_form_alter().
+ */
+function fr_groups_field_widget_form_alter(&$element, &$form_state, $context) {
+  // Hide "Other groups" table for group selection.
+  if (isset($element['#field_name']) && $element['#field_name'] == 'og_group_ref' && isset($element['admin'])) {
+    $element['admin']['#access'] = FALSE;
+  }
+}

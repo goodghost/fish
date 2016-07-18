@@ -1,0 +1,17 @@
+<?php
+/**
+ * @file
+ * Drupal needs this blank file.
+ */
+
+/**
+ * Implements hook_form_alter().
+ */
+function fr_content_form_node_form_alter(&$form, &$form_state, $form_id) {
+  // add wrapper with custom classes to form buttons on every node add/edit form
+  $actions_elements = element_children($form['actions']);
+  foreach($actions_elements as $value) {
+    $form['actions'][$value]['#prefix'] = '<div class="actions ' . drupal_clean_css_identifier($value) .'">';
+    $form['actions'][$value]['#suffix'] = '</div>';
+  }
+}

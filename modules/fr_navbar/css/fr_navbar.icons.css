@@ -1,0 +1,127 @@
+/**
+ * Styling for navbar module icons.
+ * Icon codes can be found here: https://github.com/FortAwesome/Font-Awesome/blob/master/css/font-awesome.css
+ */
+
+/* All icons */
+.navbar-bar .navbar-icon:before, .navbar-tray .navbar-icon.navbar-menu-item:before {
+  font-family: FontAwesome;
+  font-weight: normal;
+  text-rendering: auto;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transform: translate(0, 0);
+  display: inline-block;
+  background-image: none !important;
+}
+
+/**
+ * Top level icons.
+ */
+.navbar-bar .navbar-icon:before {
+  font-size: 1.7em;
+  line-height: 0.75em;
+  vertical-align: -15%;
+
+  /* Override default icon properties */
+  color: #bebebe;
+  top: 0.5em !important;
+  left: 0.4em !important;
+}
+.navbar-bar .navbar-icon.navbar-active:before, .navbar-bar .navbar-icon:active:before {
+  color: #ffffff !important;
+}
+
+/**
+ * Second level icons.
+ */
+.navbar-tray .navbar-icon.navbar-menu-item:before {
+  font-size: 1.4em;
+  top: 0.6em !important;
+  left: 0.55em !important;
+
+}
+.navbar-tray .navbar-icon.navbar-menu-item.navbar-active:before, .navbar-tray .navbar-icon.navbar-menu-item:active:before {
+  color: #353535 !important;
+}
+
+
+/**
+ * Top level icons.
+ */
+
+.navbar-icon-home:before {
+  content: "\f015" !important;
+}
+
+.navbar-icon-menu:before {
+  content: "\f0c9" !important;
+}
+
+.navbar-icon-help:before {
+  content: "\f128" !important;
+}
+
+.navbar-icon-shortcut:before {
+  content: "\f005" !important;
+}
+
+.navbar-icon-user:before {
+  content: "\f007" !important;
+}
+
+.navbar-icon-dashboard:before, .navbar-icon-my-workbench:before {
+  content: "\f0e4" !important;
+}
+
+.navbar-icon-switch-user:before {
+  content: "\f21b" !important;
+}
+
+.navbar-icon-devel:before {
+  content: "\f1a9" !important; /* For cog use: \f013 */
+}
+
+.navbar-icon-add-content:before {
+  content: "\f067" !important;
+}
+
+.navbar-icon-store:before {
+  content: "\f07a" !important;
+}
+
+/**
+ * Main menu icons.
+ */
+
+.navbar-icon-content:before {
+  content: "\f15c" !important;
+}
+
+.navbar-icon-structure:before {
+  content: "\f0e8" !important;
+}
+
+.navbar-icon-appearance:before {
+  content: "\f1fc" !important;
+}
+
+.navbar-icon-people:before, .navbar-icon-my-groups:before {
+  content: "\f0c0" !important;
+}
+
+.navbar-icon-modules:before {
+  content: "\f12e" !important;
+}
+
+.navbar-icon-configuration:before {
+  content: "\f0ad" !important;
+}
+
+.navbar-icon-reports:before {
+  content: "\f080" !important;
+}
+
+.navbar-icon-logout:before {
+  content: "\f08b" !important;
+}

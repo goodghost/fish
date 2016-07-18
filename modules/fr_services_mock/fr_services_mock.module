@@ -1,0 +1,337 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+function fr_services_mock_menu() {
+  $items = array();
+
+  // Server mocks
+
+  $items['api/views'] = array(
+    'title' => 'Get list of all available data sets',
+    'page callback' => 'fr_services_mock_get_dataset_list',
+    'delivery callback' => 'fr_services_delivery_callback',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['api/views/%'] = array(
+    'title' => 'Fetch translations for entities',
+    'page callback' => 'fr_services_mock_get_dataset_structure',
+    'page arguments' => array(2),
+    'delivery callback' => 'fr_services_delivery_callback',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['api/views/%/data'] = array(
+    'title' => 'Fetch translations for entities',
+    'page callback' => 'fr_services_mock_get_dataset_data',
+    'page arguments' => array(2),
+    'delivery callback' => 'fr_services_delivery_callback',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['api/print-requests'] = array(
+    'title' => 'POST Print requests',
+    'page callback' => 'fr_services_mock_post_request_print',
+    'delivery callback' => 'fr_services_delivery_callback',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+  $items['api/print-requests'] = array(
+    'title' => 'GET Print requests',
+    'page callback' => 'fr_services_mock_get_request_print',
+    'delivery callback' => 'fr_services_delivery_callback',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+
+  // Client mocks
+
+  $items['views'] = array(
+    'title' => 'Get list of all available datasets',
+    'page callback' => 'fr_services_dataset_list',
+    'access arguments' => array('access content'),
+  );
+
+  $items['views/%'] = array(
+    'title' => 'Get single dataset structure',
+    'page callback' => 'fr_services_dataset_structure',
+    'page arguments' => array(1),
+    'access arguments' => array('access content'),
+  );
+
+  $items['views/%/data'] = array(
+    'title' => 'Get single dataset data',
+    'page callback' => 'fr_services_dataset_data',
+    'page arguments' => array(1),
+    'access arguments' => array('access content'),
+  );
+
+  return $items;
+}
+
+function fr_services_mock_get_static_datasets() {
+  return drupal_json_decode(file_get_contents(drupal_get_path('module', 'fr_services_mock') . '/data/views.json'));
+}
+
+function fr_services_mock_get_random_datasets() {
+  module_load_include('inc', 'devel_generate', 'devel_generate');
+
+  $datasets = array();
+  $data_types = fr_dataset_field_get_data_types();
+
+  // Add more integer field so we can generate more interesting statistics.
+  $data_types += array_fill(count($data_types), count($data_types) * 2, 'int');
+
+  // Generate datasets.
+  for ($i = 1; $i <= 10; $i++) {
+    // Generate random structure for current dataset.
+    $columns = array();
+    $no_columns = rand(8, 12);
+    for ($j = 1; $j <= $no_columns; $j++) {
+      $columns[] = array(
+        'name' => devel_generate_word(rand(4, 8)),
+        'type' => $data_types[array_rand($data_types)],
+      );
+    }
+
+    // Generate random data for current dataset.
+    $data = array();
+    $no_rows = rand(10, 20);
+    for ($j = 1; $j <= $no_rows; $j++) {
+      $row = array();
+      foreach ($columns as $column) {
+        switch ($column['type']) {
+          case 'varchar':
+            $row[$column['name']] = devel_generate_word(rand(4, 8));
+            break;
+          case 'int':
+          case 'float':
+            $row[$column['name']] = rand(0, 100);
+            break;
+          case 'bool':
+            $row[$column['name']] = (bool)array_rand(array(TRUE, FALSE));
+            break;
+        }
+
+      }
+      $data[] = $row;
+    }
+
+    $datasets[] = array(
+      'id' => $i,
+      'name' => devel_create_greeking(rand(4, 8), TRUE),
+      'structure' => array('fields' => $columns),
+      'data' => array('result' => $data),
+    );
+  }
+
+  return array('datasets' => $datasets);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Callbacks for server mocks.
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Get all available DB views.
+ *
+ * @return array
+ *   List of all views.
+ */
+function fr_services_mock_get_dataset_list() {
+  $data = fr_services_mock_get_static_datasets();
+  foreach ($data['datasets'] as &$row) {
+    unset($row['structure'], $row['data']);
+  }
+  return $data;
+}
+
+/**
+ * Get structure of single dataset.
+ *
+ * @param int $view_id
+ *   ID of view to return.
+ *
+ * @return array
+ *   Dataset structure as array.
+ */
+function fr_services_mock_get_dataset_structure($view_id) {
+  $data = fr_services_mock_get_static_datasets();
+
+  foreach ($data['datasets'] as $i => $dataset) {
+    if ($dataset['id'] == $view_id) {
+      $view_id = $i;
+      break;
+    }
+  }
+
+  if (isset($data['datasets'][$view_id]['structure'])) {
+    return $data['datasets'][$view_id]['structure'];
+  }
+
+  return MENU_NOT_FOUND;
+}
+
+/**
+ * Get data of single dataset.
+ *
+ * @param int $view_id
+ *   ID of view to return.
+ *
+ * @return array
+ *   Dataset data as array.
+ */
+function fr_services_mock_get_dataset_data($view_id) {
+  $data = fr_services_mock_get_static_datasets();
+
+  foreach ($data['datasets'] as $i => $dataset) {
+    if ($dataset['id'] == $view_id) {
+      $view_id = $i;
+      break;
+    }
+  }
+
+  //dd($_SERVER['REQUEST_URI']);
+  //dd($_GET['fields'], 'fields');
+  //dd($_GET['filters'], 'filters');
+
+  if (isset($data['datasets'][$view_id]['data'])) {
+    $limit = 0;
+    $offset = 0;
+    if (isset($_GET['limit'])) {
+      $limit = intval($_GET['limit']);
+    }
+    if (isset($_GET['offset'])) {
+      $offset = intval($_GET['offset']);
+    }
+    if ($limit || $offset) {
+      $data['datasets'][$view_id]['data']['result'] = array_splice($data['datasets'][$view_id]['data']['result'], $offset, $limit);
+    }
+
+    if (isset($_GET['fields'])) {
+      $field_weights = array_flip($_GET['fields']);
+    }
+
+    foreach ($data['datasets'][$view_id]['data']['result'] as $index => &$row) {
+      // Sort array
+      $row = array_replace($field_weights, $data['datasets'][$view_id]['data']['result'][$index]);
+
+      foreach ($row as $field_key => $field_value) {
+        if (isset($_GET['fields']) && !in_array($field_key, $_GET['fields'])) {
+          unset($data['datasets'][$view_id]['data']['result'][$index][$field_key]);
+        }
+        if (isset($_GET['filters']) && is_array($_GET['filters'])) {
+          foreach ($_GET['filters'] as $filter) {
+            if ($filter['field'] != $field_key) {
+              continue;
+            }
+            elseif (!fr_services_mock_calculate_filter($filter['value'], $filter['operator'], $field_value)) {
+              unset($data['datasets'][$view_id]['data']['result'][$index]);
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    $data['datasets'][$view_id]['data']['result'] = array_values($data['datasets'][$view_id]['data']['result']);
+
+    //dd($data['datasets'][$view_id]['data'], 'DATA');
+    return $data['datasets'][$view_id]['data'];
+  }
+
+  return MENU_NOT_FOUND;
+}
+
+function fr_services_mock_calculate_filter($test_value, $operator, $real_value) {
+  switch ($operator) {
+    case '=':
+      return $test_value == $real_value;
+    case '!=':
+      return $test_value != $real_value;
+    case '<':
+      return $real_value < $test_value;
+    case '<=':
+      return $real_value <= $test_value;
+    case '>=':
+      return  $real_value >= $test_value;
+    case '>':
+      return $real_value > $test_value;
+    case 'contains':
+      return fnmatch("*$test_value*", $real_value);
+    case 'not_contains':
+      return !fnmatch("*$test_value*", $real_value);
+    case 'empty':
+      return empty($real_value);
+    case 'not_empty':
+      return !empty($real_value);
+    case 'is_true':
+      return $real_value == TRUE;
+    case 'is_false':
+      return $real_value == FALSE;
+  }
+  return TRUE;
+}
+
+function fr_services_mock_post_request_print() {
+  $data = $_POST;
+  dd($data);
+  return 'OK';
+}
+
+function fr_services_mock_get_request_print() {
+  $data = drupal_json_decode(file_get_contents(drupal_get_path('module', 'fr_services_mock') . '/data/print-requests.json'));
+
+  $caseId = isset($_GET['caseId']) ? $_GET['caseId'] : NULL;
+  $scene = isset($_GET['scened']) ? $_GET['scened'] : NULL;
+
+  foreach ($data['printRequests'] as $index => $printRequest) {
+    if (($caseId && $caseId != $printRequest['caseId']) || ($scene && $scene != $printRequest['scene'])) {
+      unset($data['printRequests'][$index]);
+    }
+  }
+
+  return $data;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Callbacks for client mocks.
+////////////////////////////////////////////////////////////////////////////////
+
+function fr_services_dataset_list() {
+  try {
+    $client = new DataSetServiceClient();
+    $data = $client->getList();
+    return "<pre><code>". print_r($data, 1) . "</code></pre>";
+  }
+  catch (Exception $e) {
+    watchdog_exception('fr_services', $e);
+  }
+}
+
+function fr_services_dataset_structure($id) {
+  try {
+    $client = new DataSetServiceClient();
+    $data = $client->getStructure($id);
+    return "<pre><code>". print_r($data, 1) . "</code></pre>";
+  }
+  catch (Exception $e) {
+    watchdog_exception('fr_services', $e);
+  }
+}
+
+function fr_services_dataset_data($id) {
+  try {
+    $client = new DataSetServiceClient();
+    $data = $client->getData($id);
+    return "<pre><code>". print_r($data, 1) . "</code></pre>";
+  }
+  catch (Exception $e) {
+    watchdog_exception('fr_services', $e);
+  }
+}

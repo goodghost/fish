@@ -1,0 +1,23 @@
+<?php
+/**
+ * @file
+ * Code for the FR Report content type feature.
+ */
+
+include_once 'fr_content_report.features.inc';
+
+function fr_content_report_menu_local_tasks_alter(&$data, $router_item, $root_path) {
+  global $user;
+  if (user_access('create report content')) {
+    switch($root_path){
+      case 'admin/fish-reports':
+        $item = menu_get_item('node/add/report');
+        $item['title'] = t('Add new report');
+        $data['actions']['output'][] = array(
+          '#theme' => 'menu_local_action',
+          '#link' => $item,
+        );
+      break;
+    }
+  }
+}

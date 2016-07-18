@@ -1,0 +1,6 @@
+name = FR Migrate
+description = Provides fr-specific Migrate handlers and base migrations.
+core = 7.x
+package = Fish Reporting
+dependencies[] = migrate
+files[] = fr_migrate.migrate.inc

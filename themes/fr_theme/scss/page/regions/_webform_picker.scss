@@ -1,0 +1,118 @@
+/* Styles for webform picker */
+
+a.url-generator {
+  @include icon_before('\f0c1', $text-default, 7px, 1em);
+  margin-left: 10px;
+  cursor: pointer;
+  &:hover {
+    text-decoration: none;
+    color: $white;
+  }
+}
+.ui-widget-overlay.ui-front {
+  z-index: 1000;
+}
+.ui-dialog {
+  &.ui-front {
+    z-index: 1001;
+  }
+  .ui-dialog-content {
+    text-align: left;
+    text-transform: none;
+  }
+  .ui-widget-header {
+    color: $white;
+    font-size: 22px;
+    font-weight: 300;
+    background: lighten($gray-base, 5%);
+    .ui-dialog-title {
+      overflow: visible;
+    }
+    button.ui-dialog-titlebar-close {
+      background: transparent;
+      border: none;
+      span.ui-button-icon-primary.ui-icon.ui-icon-closethick {
+        background-image: none;
+      }
+      .ui-button-text {
+        text-indent: -70px;
+        color: $white;
+        text-transform: uppercase;
+        font-family: $os;
+        margin-top: -7px;
+        @include icon_before('\f00d', $blue, 7px, 1.3em);
+      }
+    }
+  }
+
+  .view-webform-picker {
+    .views-exposed-form {
+      label {
+        display: block;
+        font-size: 15px;
+      }
+      select.form-select {
+        font-size: 14px;
+      }
+      .form-item {
+        input {
+          border: 1px solid lighten($gray-base, 20%);
+          border-radius: 0;
+          font-size: 14px;
+        }
+      }
+      .views-exposed-widget {
+        vertical-align: top;
+        &.views-submit-button {
+          margin-top: 23px;
+          input {
+            padding: 6px 15px;
+          }
+        }
+      }
+    }
+    .view-content {
+      table {
+        font-size: 14px;
+        tr:not(.generated) {
+          border-bottom: 1px solid lighten($gray-base, 5%);
+          &:hover {
+            cursor: pointer;
+          }
+          td.selected {
+            background: $blue;
+            color: #fff;
+          }
+        }
+        tr.generated {
+          background: lighten($gray-base, 3%);
+          label {
+            display: inline;
+            font-weight: normal;
+            font-size: 14px;
+            color: $text-default;
+          }
+          select {
+            margin-right: 15px;
+            margin-left: 3px;
+            border: 1px solid lighten($gray-base, 20%);
+            background: transparent;
+            color: darken($text-default, 25%);
+            padding: 5px 10px 5px 2px;
+            font-size: 14px;
+            font-family: $os;
+          }
+          button {
+             @include button('\f055', true);
+             border: none;
+             cursor: pointer;
+             padding-top: 6px;
+             padding-bottom: 6px;
+             font-family: $os;
+
+          }
+        }
+      }
+    }
+  }
+}

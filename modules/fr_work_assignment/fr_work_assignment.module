@@ -1,0 +1,177 @@
+<?php
+/**
+ * @file
+ * Code for the FR Work Assignment feature.
+ */
+
+include_once 'fr_work_assignment.features.inc';
+
+/**
+ * Implements hook_menu().
+ */
+function fr_work_assignment_menu() {
+  $items = array();
+  $items['user/%user/work-assignment'] = array(
+    'title' => 'Work assignment',
+    'page callback' => 'fr_work_assignment_dashboard',
+    'page arguments' => array(1),
+    'access callback' => 'fr_work_assignment_access',
+    'access arguments' => array(1),
+    'type' => MENU_LOCAL_TASK,
+  );
+  $items['save-work-assignment/%user'] = array(
+    'page callback' => 'fr_work_assignment_save_callback',
+    'page arguments' => array(1),
+    'access callback' => 'fr_work_assignment_access',
+    'access arguments' => array(1),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_navbar_alter().
+ */
+function fr_work_assignment_navbar_alter(&$items) {
+  global $user;
+  // Add "Work assignment" link to Navbar's user menu.
+  if (isset($items['user']['tray']['user_links']['#links']) && fr_user_is_remote($user)) {
+    $logout = $items['user']['tray']['user_links']['#links']['logout'];
+    unset($items['user']['tray']['user_links']['#links']['logout']);
+    $items['user']['tray']['user_links']['#links']['work-assignment'] = array(
+      'title' => t('Work assignment'),
+      'href' => "user/$user->uid/work-assignment",
+    );
+    $items['user']['tray']['user_links']['#links']['logout'] = $logout;
+  }
+}
+
+/**
+ * Implements hook_permission().
+ */
+function fr_work_assignment_permission() {
+  return array(
+    'assign work to myself' =>  array(
+      'title' => t('Assign work to myself'),
+    ),
+    'assign work to other users' =>  array(
+      'title' => t('Assign work to other users'),
+    ),
+  );
+}
+
+/**
+ * Menu access callback: Allow access only when remote user is loaded.
+ */
+function fr_work_assignment_access($account) {
+  global $user;
+  return fr_user_is_remote($account) && (($user->uid == $account->uid && user_access('assign work to myself')) || user_access('assign work to other users'));
+}
+
+/**
+ * Menu callback: Displays dashboard for work assignment.
+ */
+function fr_work_assignment_dashboard($account = NULL) {
+  global $user;
+  global $language;
+
+  $my_own_dashboard = $account->uid == $user->uid;
+  $my_team_cases = array();
+  $my_cases = array();
+
+  if (!fr_user_is_remote($account)) {
+    return MENU_ACCESS_DENIED;
+  }
+
+  try {
+    $client = new FCaseServiceClient();
+    $response = $client->getList();
+
+    if (!empty($response['cases'])) {
+      foreach ($response['cases'] as $case) {
+        $case['Case Age'] = format_interval(REQUEST_TIME - strtotime($case['Case Date']));
+
+        // Change format Case date to one assigned in Drupal settings for specific language
+        $case['Case Date'] = time($case['Case Date']);
+        $case['Case Date'] = format_date($case['Case Date'], 'medium', '', NULL, $language->language);
+
+        // Change format Target date to one assigned in Drupal settings for specific language
+        $case['Target Date'] = time($case['Target Date']);
+        $case['Target Date'] = format_date($case['Target Date'], 'medium', '', NULL, $language->language);
+
+        $case['Case Encoded'] = check_plain(drupal_json_encode($case));
+
+        if ($case['OwnerID'] == $account->data['service_user']['fd_id']) {
+          $my_cases[] = $case;
+        }
+        elseif ($case['TeamID'] == $account->data['service_user']['teamid']) {
+          $my_team_cases[] = $case;
+        }
+      }
+    }
+  }
+  catch (Exception $e) {
+    watchdog_exception('fr_work_assignment', $e);
+  }
+
+  $js_settings = array(
+    'formToken' => drupal_get_token('fr-work-assignment-dashboard-update'),
+    'updatePath' => url("save-work-assignment/$account->uid"),
+  );
+
+  $path = drupal_get_path('module', 'fr_work_assignment');
+  $build = array(
+    '#theme' => 'fr_work_assignment_dashboard',
+    '#my_own_dashboard' => $my_own_dashboard,
+    '#my_cases' => $my_cases,
+    '#my_team_cases' => $my_team_cases,
+    '#attached' => array(
+      'js' => array(
+        "$path/js/dashboard.js",
+        array('data' => array('fr_work_assignment' => $js_settings), 'type' => 'setting'),
+      ),
+      'css' => array(
+        "$path/css/fr_work_assignment.css",
+      ),
+      'library' => array(
+        array('system', 'ui.draggagle'),
+        array('system', 'ui.droppable'),
+      ),
+    ),
+  );
+  return $build;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function fr_work_assignment_theme($existing, $type, $theme, $path) {
+  $templates_path = drupal_get_path('module', 'fr_work_assignment') . '/templates';
+  return array(
+    'fr_work_assignment_dashboard' => array(
+      'variables' => array('my_cases' => array(), 'my_team_cases' => array(), 'my_own_dashboard' => FALSE),
+      'template' => 'fr-work-assignment-dashboard',
+      'path' => $templates_path,
+    ),
+  );
+}
+
+/**
+ * Menu callback: Return save work assignment data.
+ */
+function fr_work_assignment_save_callback($account) {
+  if (!empty($_REQUEST['form_token']) && drupal_valid_token($_REQUEST['form_token'], 'fr-work-assignment-dashboard-update')) {
+    try {
+      $case_id = check_plain($_REQUEST['case_id']);
+      $target = check_plain($_REQUEST['target']);
+      $assignment = $target == 'user' ? $account->data['service_user']['fd_id'] : '';
+
+      $client = new FCaseServiceClient();
+      $client->assignToUser($case_id, $assignment);
+    }
+    catch (Exception $e) {
+      watchdog_exception('fr_work_assignment', $e);
+    }
+  }
+  drupal_exit();
+}

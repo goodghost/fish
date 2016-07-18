@@ -1,0 +1,860 @@
+{
+  "datasets": [
+    {
+      "id": "population",
+      "name": "Population",
+      "structure": {
+        "fields": [
+          {
+            "name": "Country",
+            "type": "varchar"
+          },
+          {
+            "name": "Population",
+            "type": "int"
+          },
+          {
+            "name": "Area Percentage",
+            "type": "int"
+          }
+        ]
+      },
+      "data": {
+        "result": [
+          {
+            "Country": "Poland",
+            "Population": 95,
+            "Area Percentage": 74
+          },
+          {
+            "Country": "Russia",
+            "Population": 79,
+            "Area Percentage": 63
+          },
+          {
+            "Country": "Germany",
+            "Population": 70,
+            "Area Percentage": 84
+          },
+          {
+            "Country": "USA",
+            "Population": 45,
+            "Area Percentage": 14
+          },
+          {
+            "Country": "Canada",
+            "Population": 81,
+            "Area Percentage": 33
+          },
+          {
+            "Country": "Argentina",
+            "Population": 96,
+            "Area Percentage": 79
+          },
+          {
+            "Country": "Norway",
+            "Population": 66,
+            "Area Percentage": 69
+          },
+          {
+            "Country": "Iran",
+            "Population": 97,
+            "Area Percentage": 76
+          },
+          {
+            "Country": "Australia",
+            "Population": 91,
+            "Area Percentage": 87
+          }
+        ]
+      }
+    },
+    {
+      "id": "visitations",
+      "name": "Visitations",
+      "structure": {
+        "fields": [
+          {
+            "name": "Year",
+            "type": "int"
+          },
+          {
+            "name": "Visitations",
+            "type": "int"
+          }
+        ]
+      },
+      "data": {
+        "result": [
+          {
+            "Year": 2004,
+            "Visitations": 52
+          },
+          {
+            "Year": 2005,
+            "Visitations": 73
+          },
+          {
+            "Year": 2006,
+            "Visitations": 16
+          },
+          {
+            "Year": 2007,
+            "Visitations": 50
+          },
+          {
+            "Year": 2008,
+            "Visitations": 1
+          },
+          {
+            "Year": 2009,
+            "Visitations": 89
+          },
+          {
+            "Year": 2010,
+            "Visitations": 35
+          },
+          {
+            "Year": 2011,
+            "Visitations": 75
+          },
+          {
+            "Year": 2012,
+            "Visitations": 22
+          },
+          {
+            "Year": 2013,
+            "Visitations": 63
+          },
+          {
+            "Year": 2014,
+            "Visitations": 82
+          }
+        ]
+      }
+    },
+    {
+      "id": "book_sales",
+      "name": "Book sales",
+      "structure": {
+        "fields": [
+          {
+            "name": "Year",
+            "type": "int"
+          },
+          {
+            "name": "Fantasy & Sci Fi",
+            "type": "varchar"
+          },
+          {
+            "name": "Romance",
+            "type": "varchar"
+          },
+          {
+            "name": "Mystery/Crime",
+            "type": "varchar"
+          },
+          {
+            "name": "General",
+            "type": "varchar"
+          },
+          {
+            "name": "Western",
+            "type": "varchar"
+          },
+          {
+            "name": "Literature",
+            "type": "varchar"
+          }
+        ]
+      },
+      "data": {
+        "result": [
+          {
+            "Year": 2007,
+            "Fantasy & Sci Fi": 8,
+            "Romance": 75,
+            "Mystery/Crime": 83,
+            "General": 42,
+            "Western": 59,
+            "Literature": 75
+          },
+          {
+            "Year": 2006,
+            "Fantasy & Sci Fi": 65,
+            "Romance": 68,
+            "Mystery/Crime": 96,
+            "General": 46,
+            "Western": 39,
+            "Literature": 71
+          },
+          {
+            "Year": 2007,
+            "Fantasy & Sci Fi": 95,
+            "Romance": 96,
+            "Mystery/Crime": 83,
+            "General": 100,
+            "Western": 48,
+            "Literature": 1
+          },
+          {
+            "Year": 2008,
+            "Fantasy & Sci Fi": 58,
+            "Romance": 77,
+            "Mystery/Crime": 63,
+            "General": 0,
+            "Western": 22,
+            "Literature": 98
+          },
+          {
+            "Year":2009,
+            "Fantasy & Sci Fi": 31,
+            "Romance": 65,
+            "Mystery/Crime": 96,
+            "General": 78,
+            "Western": 34,
+            "Literature": 22
+          },
+          {
+            "Year": 2010,
+            "Fantasy & Sci Fi": 0,
+            "Romance": 5,
+            "Mystery/Crime": 33,
+            "General": 79,
+            "Western": 28,
+            "Literature": 30
+          },
+          {
+            "Year": 2011,
+            "Fantasy & Sci Fi": 63,
+            "Romance": 7,
+            "Mystery/Crime": 61,
+            "General": 63,
+            "Western": 84,
+            "Literature": 70
+          },
+          {
+            "Year": 2012,
+            "Fantasy & Sci Fi": 46,
+            "Romance": 65,
+            "Mystery/Crime": 75,
+            "General": 83,
+            "Western": 64,
+            "Literature": 86
+          },
+          {
+            "Year": 2013,
+            "Fantasy & Sci Fi": 5,
+            "Romance": 92,
+            "Mystery/Crime": 87,
+            "General": 84,
+            "Western": 15,
+            "Literature": 46
+          },
+          {
+            "Year": 2014,
+            "Fantasy & Sci Fi": 13,
+            "Romance": 53,
+            "Mystery/Crime": 61,
+            "General": 76,
+            "Western": 45,
+            "Literature": 26
+          }
+        ]
+      }
+    },
+    {
+      "id": "company_performance",
+      "name": "Company Performance",
+      "structure": {
+        "fields": [
+          {
+            "name": "Year",
+            "type": "int"
+          },
+          {
+            "name": "Sales",
+            "type": "int"
+          },
+          {
+            "name": "Expenses",
+            "type": "int"
+          },
+          {
+            "name": "Profit",
+            "type": "int"
+          }
+        ]
+      },
+      "data": {
+        "result": [
+          {
+            "Year": 1998,
+            "Sales": 87,
+            "Expenses": 45,
+            "Profit": 72
+          },
+          {
+            "Year": 1999,
+            "Sales": 35,
+            "Expenses": 100,
+            "Profit": 1
+          },
+          {
+            "Year": 2000,
+            "Sales": 46,
+            "Expenses": 90,
+            "Profit": 68
+          },
+          {
+            "Year": 2001,
+            "Sales": 53,
+            "Expenses": 86,
+            "Profit": 93
+          },
+          {
+            "Year": 2002,
+            "Sales": 5,
+            "Expenses": 7,
+            "Profit": 83
+          },
+          {
+            "Year": 2003,
+            "Sales": 86,
+            "Expenses": 47,
+            "Profit": 3
+          },
+          {
+            "Year": 2004,
+            "Sales": 5,
+            "Expenses": 42,
+            "Profit": 60
+          },
+          {
+            "Year": 2005,
+            "Sales": 65,
+            "Expenses": 13,
+            "Profit": 88
+          },
+          {
+            "Year": 2006,
+            "Sales": 98,
+            "Expenses": 14,
+            "Profit": 38
+          },
+          {
+            "Year": 2007,
+            "Sales": 96,
+            "Expenses": 54,
+            "Profit": 71
+          },
+          {
+            "Year": 2008,
+            "Sales": 5,
+            "Expenses": 38,
+            "Profit": 45
+          },
+          {
+            "Year": 2009,
+            "Sales": 5,
+            "Expenses": 40,
+            "Profit": 95
+          },
+          {
+            "Year": 2010,
+            "Sales": 96,
+            "Expenses": 78,
+            "Profit": 64
+          },
+          {
+            "Year": 2011,
+            "Sales": 89,
+            "Expenses": 30,
+            "Profit": 22
+          },
+          {
+            "Year": 2012,
+            "Sales": 67,
+            "Expenses": 87,
+            "Profit": 14
+          },
+          {
+            "Year": 2013,
+            "Sales": 95,
+            "Expenses": 35,
+            "Profit": 90
+          },
+          {
+            "Year": 2014,
+            "Sales": 20,
+            "Expenses": 18,
+            "Profit": 24
+          }
+        ]
+      }
+    },
+    {
+      "id": "nearby_galaxies",
+      "name": "Nearby galaxies",
+      "structure": {
+        "fields": [
+          {
+            "name": "Galaxy",
+            "type": "varchar"
+          },
+          {
+            "name": "Distance",
+            "type": "int"
+          },
+          {
+            "name": "Brightness",
+            "type": "float"
+          }
+        ]
+      },
+      "data": {
+        "result": [
+          {
+            "Galaxy": "Canis Major Dwarf",
+            "Distance": 8000,
+            "Brightness": 23.3
+          },
+          {
+            "Galaxy": "Sagittarius Dwarf",
+            "Distance": 24000,
+            "Brightness": 4.5
+          },
+          {
+            "Galaxy": "Ursa Major II Dwarf",
+            "Distance": 30000,
+            "Brightness": 14.3
+          },
+          {
+            "Galaxy": "Lg. Magellanic Cloud",
+            "Distance": 50000,
+            "Brightness": 0.9
+          },
+          {
+            "Galaxy": "Bootes I",
+            "Distance": 60000,
+            "Brightness": 13.1
+          }
+        ]
+      }
+    },
+    {
+      "id": "chess_opening_moves",
+      "name": "Chess opening moves",
+      "structure": {
+        "fields": [
+          {
+            "name": "Move",
+            "type": "varchar"
+          },
+          {
+            "name": "Percentage",
+            "type": "int"
+          }
+        ]
+      },
+      "data": {
+        "result": [
+          {
+            "Move": "King's pawn (e4)",
+            "Percentage": 44
+          },
+          {
+            "Move": "Queen's pawn (d4)",
+            "Percentage": 31
+          },
+          {
+            "Move": "Knight to King 3 (Nf3)",
+            "Percentage": 12
+          },
+          {
+            "Move": "Queen's bishop pawn (c4)",
+            "Percentage": 10
+          },
+          {
+            "Move": "Other",
+            "Percentage": 3
+          }
+        ]
+      }
+    },
+    {
+      "id": "lengths_of_dinosaurs_in_meters",
+      "name": "Lengths of dinosaurs, in meters",
+      "structure": {
+        "fields": [
+          {
+            "name": "Dinosaur",
+            "type": "varchar"
+          },
+          {
+            "name": "Length",
+            "type": "float"
+          }
+        ]
+      },
+      "data": {
+        "result": [
+          {
+            "Dinosaur": "Acrocanthosaurus (top-spined lizard)",
+            "Length": 12.2
+          },
+          {
+            "Dinosaur": "Albertosaurus (Alberta lizard)",
+            "Length": 9.1
+          },
+          {
+            "Dinosaur": "Allosaurus (other lizard)",
+            "Length": 12.2
+          },
+          {
+            "Dinosaur": "Apatosaurus (deceptive lizard)",
+            "Length": 22.9
+          },
+          {
+            "Dinosaur": "Archaeopteryx (ancient wing)",
+            "Length": 0.9
+          },
+          {
+            "Dinosaur": "Argentinosaurus (Argentina lizard)",
+            "Length": 36.6
+          },
+          {
+            "Dinosaur": "Baryonyx (heavy claws)",
+            "Length": 9.1
+          },
+          {
+            "Dinosaur": "Brachiosaurus (arm lizard)",
+            "Length": 30.5
+          },
+          {
+            "Dinosaur": "Ceratosaurus (horned lizard)",
+            "Length": 6.1
+          },
+          {
+            "Dinosaur": "Coelophysis (hollow form)",
+            "Length": 2.7
+          },
+          {
+            "Dinosaur": "Compsognathus (elegant jaw)",
+            "Length": 0.9
+          },
+          {
+            "Dinosaur": "Deinonychus (terrible claw)",
+            "Length": 2.7
+          },
+          {
+            "Dinosaur": "Diplodocus (double beam)",
+            "Length": 27.1
+          },
+          {
+            "Dinosaur": "Dromicelomimus (emu mimic)",
+            "Length": 3.4
+          },
+          {
+            "Dinosaur": "Gallimimus (fowl mimic)",
+            "Length": 5.5
+          },
+          {
+            "Dinosaur": "Mamenchisaurus (Mamenchi lizard)",
+            "Length": 21.0
+          },
+          {
+            "Dinosaur": "Megalosaurus (big lizard)",
+            "Length": 7.9
+          },
+          {
+            "Dinosaur": "Microvenator (small hunter)",
+            "Length": 1.2
+          },
+          {
+            "Dinosaur": "Ornithomimus (bird mimic)",
+            "Length": 4.6
+          },
+          {
+            "Dinosaur": "Oviraptor (egg robber)",
+            "Length": 1.5
+          },
+          {
+            "Dinosaur": "Plateosaurus (flat lizard)",
+            "Length": 7.9
+          },
+          {
+            "Dinosaur": "Sauronithoides (narrow-clawed lizard)",
+            "Length": 2.0
+          },
+          {
+            "Dinosaur": "Seismosaurus (tremor lizard)",
+            "Length": 45.7
+          },
+          {
+            "Dinosaur": "Spinosaurus (spiny lizard)",
+            "Length": 12.2
+          },
+          {
+            "Dinosaur": "Supersaurus (super lizard)",
+            "Length": 30.5
+          },
+          {
+            "Dinosaur": "Tyrannosaurus (tyrant lizard)",
+            "Length": 15.2
+          },
+          {
+            "Dinosaur": "Ultrasaurus (ultra lizard)",
+            "Length": 30.5
+          },
+          {
+            "Dinosaur": "Velociraptor (swift robber)",
+            "Length": 1.8
+          }
+        ]
+      }
+    },
+    {
+      "id": "coffee_production_by_country",
+      "name": "Coffee Production by Country",
+      "structure": {
+        "fields": [
+          {
+            "name": "Date",
+            "type": "date"
+          },
+          {
+            "name": "Bolivia",
+            "type": "int"
+          },
+          {
+            "name": "Ecuador",
+            "type": "int"
+          },
+          {
+            "name": "Madagascar",
+            "type": "int"
+          },
+          {
+            "name": "Papua New Guinea",
+            "type": "int"
+          },
+          {
+            "name": "Rwanda",
+            "type": "int"
+          },
+          {
+            "name": "Average",
+            "type": "float"
+          }
+        ]
+      },
+      "data": {
+        "result": [
+          {
+            "Date": "2015-01-01",
+            "Bolivia": 14,
+            "Ecuador": 48,
+            "Madagascar": 73,
+            "Papua New Guinea": 3,
+            "Rwanda": 16,
+            "Average": 614.6
+          },
+          {
+            "Date": "2015-01-02",
+            "Bolivia": 6,
+            "Ecuador": 43,
+            "Madagascar": 22,
+            "Papua New Guinea": 17,
+            "Rwanda": 85,
+            "Average": 682
+          },
+          {
+            "Date": "2015-01-03",
+            "Bolivia": 87,
+            "Ecuador": 81,
+            "Madagascar": 23,
+            "Papua New Guinea": 64,
+            "Rwanda": 24,
+            "Average": 623
+          },
+          {
+            "Date": "2015-01-04",
+            "Bolivia": 16,
+            "Ecuador": 26,
+            "Madagascar": 24,
+            "Papua New Guinea": 59,
+            "Rwanda": 91,
+            "Average": 609.4
+          },
+          {
+            "Date":"2015-01-05",
+            "Bolivia": 43,
+            "Ecuador": 22,
+            "Madagascar": 48,
+            "Papua New Guinea": 17,
+            "Rwanda": 99,
+            "Average": 569.6
+          }
+        ]
+      }
+    },
+    {
+      "id": "the_decline_of_the_39_steps",
+      "name": "The decline of The 39 Steps",
+      "structure": {
+        "fields": [
+          {
+            "name": "Director (Year)",
+            "type": "varchar"
+          },
+          {
+            "name": "Rotten Tomatoes",
+            "type": "float"
+          },
+          {
+            "name": "IMDB",
+            "type": "float"
+          }
+        ]
+      },
+      "data": {
+        "result": [
+          {
+            "Director (Year)": "Alfred Hitchcock (1935)",
+            "Rotten Tomatoes": 8.4,
+            "IMDB": 7.9
+          },
+          {
+            "Director (Year)": "Ralph Thomas (1959)",
+            "Rotten Tomatoes": 6.9,
+            "IMDB": 6.5
+          },
+          {
+            "Director (Year)": "Don Sharp (1978)",
+            "Rotten Tomatoes": 6.5,
+            "IMDB": 6.4
+          },
+          {
+            "Director (Year)": "James Hawes (2008)",
+            "Rotten Tomatoes": 4.4,
+            "IMDB": 6.2
+          }
+        ]
+      }
+    },
+    {
+      "id": "box_office_earnings_in_first_two_weeks_of_opening",
+      "name": "Box Office Earnings in First Two Weeks of Opening",
+      "structure": {
+        "fields": [
+          {
+            "name": "Day",
+            "type": "int"
+          },
+          {
+            "name": "Guardians of the Galaxy",
+            "type": "float"
+          },
+          {
+            "name": "The Avengers",
+            "type": "float"
+          },
+          {
+            "name": "Transformers: Age of Extinction",
+            "type": "float"
+          }
+        ]
+      },
+      "data": {
+        "result": [
+
+          {
+            "Day": 1,
+            "Guardians of the Galaxy": 37.8,
+            "The Avengers": 80.8,
+            "Transformers: Age of Extinction": 41.8
+          },
+          {
+            "Day": 2,
+            "Guardians of the Galaxy": 30.9,
+            "The Avengers": 69.5,
+            "Transformers: Age of Extinction": 32.4
+          },
+          {
+            "Day": 3,
+            "Guardians of the Galaxy": 25.4,
+            "The Avengers":   57,
+            "Transformers: Age of Extinction": 25.7
+          },
+          {
+            "Day": 4,
+            "Guardians of the Galaxy": 11.7,
+            "The Avengers": 18.8,
+            "Transformers: Age of Extinction": 10.5
+          },
+          {
+            "Day": 5,
+            "Guardians of the Galaxy": 11.9,
+            "The Avengers": 17.6,
+            "Transformers: Age of Extinction": 10.4
+          },
+          {
+            "Day": 6,
+            "Guardians of the Galaxy":  8.8,
+            "The Avengers": 13.6,
+            "Transformers: Age of Extinction":  7.7
+          },
+          {
+            "Day": 7,
+            "Guardians of the Galaxy":  7.6,
+            "The Avengers": 12.3,
+            "Transformers: Age of Extinction":  9.6
+          },
+          {
+            "Day": 8,
+            "Guardians of the Galaxy": 12.3,
+            "The Avengers": 29.2,
+            "Transformers: Age of Extinction": 10.6
+          },
+          {
+            "Day": 9,
+            "Guardians of the Galaxy": 16.9,
+            "The Avengers": 42.9,
+            "Transformers: Age of Extinction": 14.8
+          },
+          {
+            "Day": 10,
+            "Guardians of the Galaxy":12.8,
+            "The Avengers": 30.9,
+            "Transformers: Age of Extinction": 11.6
+          },
+          {
+            "Day": 11,
+            "Guardians of the Galaxy": 5.3,
+            "The Avengers":  7.9,
+            "Transformers: Age of Extinction":  4.7
+          },
+          {
+            "Day": 12,
+            "Guardians of the Galaxy": 6.6,
+            "The Avengers":  8.4,
+            "Transformers: Age of Extinction":  5.2
+          },
+          {
+            "Day": 13,
+            "Guardians of the Galaxy": 4.8,
+            "The Avengers":  6.3,
+            "Transformers: Age of Extinction":  3.6
+          },
+          {
+            "Day": 14,
+            "Guardians of the Galaxy": 4.2,
+            "The Avengers":  6.2,
+            "Transformers: Age of Extinction":  3.4
+          }
+        ]
+      }
+    }
+  ]
+}

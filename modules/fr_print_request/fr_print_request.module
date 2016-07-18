@@ -1,0 +1,300 @@
+<?php
+
+define('FR_PRINT_REQUEST_STATUS_COMPLETED', 'Completed');
+define('FR_PRINT_REQUEST_STATUS_REJECTED', 'Rejected');
+define('FR_PRINT_REQUEST_STATUS_APPROVED', 'Approved');
+define('FR_PRINT_REQUEST_STATUS_SUBMITTED', 'Submitted');
+define('FR_PRINT_REQUEST_STATUS_PENDING_APPROVAL', 'Pending Approval');
+define('FR_PRINT_REQUEST_STATUS_WAITING', 'Waiting');
+define('FR_PRINT_REQUEST_STATUS_IN_PROGRESS', 'In Progress');
+define('FR_PRINT_REQUEST_STATUS_CANCELLED', 'Cancelled');
+define('FR_PRINT_REQUEST_STATUS_IN_ERROR', 'In Error');
+define('FR_PRINT_REQUEST_STATUS_SYSTEM_DECLINED', 'System Declined');
+define('FR_PRINT_REQUEST_STATUS_OPERATOR_DECLINED', 'Operator Declined');
+define('FR_PRINT_REQUEST_STATUS_REQUIRES_ACTION', 'Requires Action');
+define('FR_PRINT_REQUEST_STATUS_ON_HOLD', 'On Hold');
+define('FR_PRINT_REQUEST_STATUS_RESUBMITTED', 'Resubmitted');
+define('FR_PRINT_REQUEST_STATUS_REPRINT', 'Reprint');
+
+/**
+ * Implements hook_menu().
+ */
+function fr_print_request_menu() {
+  $items = array();
+
+  $items['cases/%fr_case/scenes/%fr_case_scene_wildcard/print'] = array(
+    'title' => 'Print requests',
+    'type' => MENU_LOCAL_TASK,
+    'page callback' => 'fr_print_request_manage_page',
+    'page arguments' => array(1, 3),
+    'load arguments' => array('%map'),
+    'access arguments' => array('access content'),
+    'file' => 'fr_print_request.pages.inc',
+  );
+
+  $items['cases/%fr_case/scenes/%fr_case_scene_wildcard/print/new/%'] = array(
+    'title' => 'New print request',
+    'type' => MENU_LOCAL_TASK,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('fr_print_request_form', 1, 3, NULL, 6),
+    'load arguments' => array('%map'),
+    'access arguments' => array(1, 3, NULL, 6),
+    'access callback' => 'fr_print_request_create_access',
+    'file' => 'fr_print_request.pages.inc',
+  );
+
+  $items['cases/%fr_case/scenes/%fr_case_scene_wildcard/print/new'] = array(
+    'title' => 'New print request',
+    'type' => MENU_LOCAL_ACTION,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('fr_print_request_form', 1, 3),
+    'load arguments' => array('%map'),
+    'access arguments' => array(1, 3, 5),
+    'access callback' => 'fr_print_request_create_access',
+    'file' => 'fr_print_request.pages.inc',
+  );
+
+  $items['cases/%fr_case/scenes/%fr_case_scene_wildcard/print/%fr_print_request/edit'] = array(
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -999,
+    'title' => 'Edit print request',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('fr_print_request_form', 1, 3, 5),
+    'load arguments' => array('%map'),
+    'access arguments' => array(1, 3, 5),
+    'access callback' => 'fr_print_request_edit_access',
+    'file' => 'fr_print_request.pages.inc',
+  );
+
+  $items['cases/%fr_case/scenes/%fr_case_scene_wildcard/print/%fr_print_request/approve'] = array(
+    'type' => MENU_LOCAL_TASK,
+    'title' => 'Approve print request',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('fr_print_request_approve_form', 1, 3, 5),
+    'load arguments' => array('%map'),
+    'access arguments' => array(1, 3, 5),
+    'access callback' => 'fr_print_request_approve_access',
+    'file' => 'fr_print_request.pages.inc',
+  );
+
+  $items['cases/%fr_case/scenes/%fr_case_scene_wildcard/print/%fr_print_request/reject'] = array(
+    'type' => MENU_LOCAL_TASK,
+    'title' => 'Reject print request',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('fr_print_request_reject_form', 1, 3, 5),
+    'load arguments' => array('%map'),
+    'access arguments' => array(1, 3, 5),
+    'access callback' => 'fr_print_request_reject_access',
+    'file' => 'fr_print_request.pages.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function fr_print_request_permission() {
+  return array(
+    'approve print requests' => array(
+      'title' => t('Approve print requests'),
+    ),
+    'reject print requests' => array(
+      'title' => t('Reject print requests'),
+    ),
+    'edit any print request' => array(
+      'title' => t('Edit any print request'),
+    ),
+  );
+}
+
+/**
+ * Return available print requests statuses.
+ *
+ * @return array
+ *
+ * @deprecated
+ */
+function fr_print_request_statuses() {
+  return array(
+    1 => t('Completed'),
+    2 => t('Rejected'),
+    3 => t('Approved'),
+    4 => t('Submitted'),
+    5 => t('Pending Approval'),
+    6 => t('Waiting'),
+    7 => t('In Progress'),
+    8 => t('Cancelled'),
+    9 => t('In Error'),
+    10 => t('System Declined'),
+    11 => t('Operator Declined'),
+    12 => t('Requires Action'),
+    13 => t('On Hold'),
+    14 => t('Resubmitted'),
+    15 => t('Reprint'),
+  );
+}
+
+/**
+ * Loads a print request form the service.
+ */
+function fr_print_request_load($print_request_id, $reset = false) {
+  // Don't load multiple times the same case during one page request.
+  if (!$reset && $print_request = &drupal_static(__FUNCTION__, array())) {
+    return $print_request;
+  }
+  try {
+    $client = new DataSetServiceClient();
+    $client->setFilters(array(array('operator' => '=', 'field' => 'id', 'value' => $print_request_id)));
+    $data = $client->getData('fish_workflow.print_requests_summary');
+    $print_requests = $data['result'];
+
+    if (isset($print_requests[0])) {
+      return $print_requests[0];
+    }
+    else {
+      return NULL;
+    }
+  }
+  catch (Exception $e) {
+    watchdog_exception('fr_print_request', $e);
+    return $e->getMessage();
+  }
+}
+
+/**
+ * Load all print request for selected scene.
+ *
+ * @param int $case_id
+ * @param int $scene_id
+ * @param int $scene_id
+ *
+ * @return array
+ *   Print requests.
+ */
+function fr_print_request_load_for_user($case_id, $scene_id, $user_name) {
+  try {
+    $client = new DataSetServiceClient();
+    $client->setFilters(array(
+      array('operator' => '=', 'field' => 'scene_id', 'value' => $scene_id),
+      array('operator' => '=', 'field' => 'case_id', 'value' => $case_id),
+      array('operator' => '=', 'field' => 'user_name', 'value' => $user_name)
+    ));
+    $data = $client->getData('fish_workflow.print_requests_summary');
+
+    return $data['result'];
+  }
+  catch (ServiceException $e) {
+    watchdog_exception('fr_print_request', $e);
+  }
+}
+
+/**
+ * Load all print request for selected scene.
+ *
+ * @param int $case_id
+ * @param int $scene_id
+ * @param int $scene_id
+ *
+ * @return array
+ *   Print requests.
+ */
+function fr_print_request_load_pending_for_user($case_id, $scene_id, $user_name) {
+  try {
+    $client = new DataSetServiceClient();
+    $client->setFilters(array(
+      array('operator' => '=', 'field' => 'scene_id', 'value' => $scene_id),
+      array('operator' => '=', 'field' => 'case_id', 'value' => $case_id),
+      array('operator' => '=', 'field' => 'status', 'value' => FR_PRINT_REQUEST_STATUS_PENDING_APPROVAL),
+      array('operator' => '=', 'field' => 'user_name', 'value' => $user_name)
+    ));
+    $data = $client->getData('fish_workflow.print_requests_summary');
+
+    return $data['result'];
+  }
+  catch (ServiceException $e) {
+    watchdog_exception('fr_print_request', $e);
+  }
+}
+
+/**
+ * Load all print request for selected scene.
+ *
+ * @param int $case_id
+ * @param int $scene_id
+ *
+ * @return array
+ *   Print requests.
+ */
+function fr_print_request_load_all_for_scene($case_id, $scene_id) {
+  try {
+    $client = new DataSetServiceClient();
+
+    $client->setFilters(array(
+      array('operator' => '=', 'field' => 'scene_id', 'value' => $scene_id),
+      array('operator' => '=', 'field' => 'case_id', 'value' => $case_id),
+    ));
+    $data = $client->getData('fish_workflow.print_requests_summary');
+    return $data['result'];
+  }
+  catch (ServiceException $e) {
+    watchdog_exception('fr_print_request', $e);
+  }
+}
+
+/**
+ * Access callback for print request add form.
+ */
+function fr_print_request_create_access($case, $scene) {
+  $is_remote = fr_user_is_remote();
+
+  return $is_remote;
+}
+
+/**
+ * Access callback for print request edit form.
+ */
+function fr_print_request_edit_access($case, $scene, $print_request = NULL) {
+  if(empty($print_request)) {
+    return false;
+  }
+
+  $is_remote = fr_user_is_remote();
+  $editing_not_expired = $print_request['status'] == FR_PRINT_REQUEST_STATUS_PENDING_APPROVAL;
+  $can_edit_own = fr_user_get_username() == $print_request['user_name'];
+  $can_edit_any = fr_user_get_username() != $print_request['user_name'] && user_access('edit any print request');
+
+  return $is_remote && $editing_not_expired && ($can_edit_own || $can_edit_any);
+}
+
+/**
+ * Access callback for print request approve form.
+ */
+function fr_print_request_approve_access($case, $scene, $print_request = NULL) {
+  if(empty($print_request)) {
+    return false;
+  }
+
+  $is_remote = fr_user_is_remote();
+  $approving_not_expired = $print_request['status'] == FR_PRINT_REQUEST_STATUS_PENDING_APPROVAL;
+
+  return $is_remote && $approving_not_expired && user_access('approve print requests');
+}
+
+/**
+ * Access callback for print request reject form.
+ */
+function fr_print_request_reject_access($case, $scene, $print_request = NULL) {
+  if(empty($print_request)) {
+    return false;
+  }
+
+  $is_remote = fr_user_is_remote();
+  $rejecting_not_expired = $print_request['status'] == FR_PRINT_REQUEST_STATUS_PENDING_APPROVAL;
+
+  return $is_remote && $rejecting_not_expired && user_access('reject print requests');
+}
+
+function fr_print_request_get_url($case, $scene, $print_request) {
+  return "cases/{$case['case_id']}/scenes/{$scene['id']}/print/{$print_request['id']}";
+}

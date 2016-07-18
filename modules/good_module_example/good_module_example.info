@@ -1,0 +1,6 @@
+name = Good Module Example
+description = This is an example of how to write your module code in functional way, so it can be tested in automated fashion using vanilla PHPUnit.
+version = VERSION
+core = 7.x
+
+files[] = includes/good_module_example.class.info

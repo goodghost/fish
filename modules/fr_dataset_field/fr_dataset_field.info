@@ -1,0 +1,13 @@
+name = FR Dataset Field
+description = Provides a <em>Serialized</em> field type which allows modules to store arbitrary data.
+core = 7.x
+package = Fish Reporting
+version = 7.x-1.0
+
+dependencies[] = date_popup
+dependencies[] = elements
+dependencies[] = field
+dependencies[] = fr_services
+dependencies[] = fr_colorpicker
+
+files[] = includes/DataSetServiceClient.inc

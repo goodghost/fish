@@ -1,0 +1,57 @@
+//Styles for reports
+
+//admin page for fish reports
+ul.action-links li a {
+  @include button('\f055', false);
+}
+
+.dataset-visualisation-type-table {
+  .google-visualization-table-div-page {
+    .charts-custom-button {
+      background: transparent;
+      .charts-custom-button-outer-box {
+        border: none !important;
+        .charts-custom-button-inner-box {
+          color: $text-default !important;
+          border: none !important;
+        }
+      }
+      &.charts-custom-button-collapse-right {
+        @include icon_before('\f104', $text-default, 7px, 1em);
+        &:before {
+          line-height: 30px;
+        }
+      }
+      &.charts-custom-button-collapse-left {
+        @include icon_before('|', lighten($gray-base, 20%), 2px, 1em);
+        @include icon_after('\f105', $text-default, 7px, 1em);
+        &:after {
+          line-height: 30px;
+        }
+      }
+    }
+    .google-visualization-table-page-numbers {
+      margin-left: 15px;
+      .google-visualization-table-page-number.gradient.current {
+        background: $blue;
+        color: $white;
+        border: none;
+        border-radius: 0;
+        padding: 8px 10px;
+        &:hover {
+          background: lighten($blue, 5%);
+        }
+      }
+      .google-visualization-table-page-number.gradient {
+        background: lighten($gray-base, 5%);
+        color: $white;
+        border: none;
+        border-radius: 0;
+        padding: 8px 10px;
+        &:hover {
+          background: lighten($gray-base, 10%);
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,148 @@
+/* Styles for charts */
+.dataset-visualisation-type-bar-chart.dataset-visualisation-wrapper,
+.dataset-visualisation-type-pie-chart.dataset-visualisation-wrapper,
+.dataset-visualisation-type-line-chart.dataset-visualisation-wrapper {
+  position: relative;
+  padding-bottom: 100%;
+  height: 0;
+}
+.dataset-visualisation-type-bar-chart .dataset-visualisation-object,
+.dataset-visualisation-type-pie-chart .dataset-visualisation-object,
+.dataset-visualisation-type-line-chart .dataset-visualisation-object {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/*
+ * Styles for exposed filters
+ */
+
+.dataset-exposed-filters-form .form-item, .dataset-exposed-filters-form .container-inline-date {
+  float: left;
+  clear: none;
+  margin-right: 20px;
+}
+.dataset-exposed-filters-form .container-inline-date .date-padding, .field-type-dataset .container-inline-date .date-padding {
+  padding: 0;
+}
+.dataset-exposed-filters-form .form-buttons {
+  clear: both;
+  display: block;
+}
+
+.dataset-exposed-filters-form .button-apply:hover,
+.dataset-exposed-filters-form .button-apply:focus,
+.dataset-exposed-filters-form .button-apply:active,
+.dataset-exposed-filters-form .button-apply:disabled {
+  background: #359ff2;
+  box-shadow: 0 1px 2px #cccccc, inset 0 1px 1px #7bb8ef;
+  color: #fff;
+  text-shadow: 0 -1px 1px #2F88CD;
+}
+
+/*
+ * Styles for exposed filters displayed in dashboard.
+ */
+.node-type-dashboard .dataset-exposed-filters-form {
+  position: relative;
+}
+
+.node-type-dashboard .dataset-exposed-filters-form .collapsed .fieldset-legend {
+  float: right;
+}
+
+.node-type-dashboard .dataset-exposed-filters-form .fieldset-filters {
+  position: absolute;
+  right: 0;
+  top: -52px;
+  z-index: 1;
+  border: 0;
+}
+
+.node-type-dashboard .dataset-exposed-filters-form .fieldset-filters .fieldset-wrapper {
+  background: #35393D;
+  border: 1px solid #BEBFB9;
+  padding-top: 13px;
+  box-shadow: 0px 0px 2px #888888;
+  max-width: 350px;
+  float: right;
+}
+
+.node-type-dashboard .dataset-exposed-filters-form .fieldset-filters.collapsed .fieldset-wrapper {
+  background: none;
+  border: none;
+}
+
+.node-type-dashboard .dataset-exposed-filters-form .fieldset-filters legend {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 100px;
+}
+
+td.field-enabled .form-type-checkbox label::before {
+  display: none;
+}
+td.field-enabled .form-type-checkbox input {
+  float: left;
+}
+
+.tabledrag-label {
+  display: none;
+}
+
+.filter-exposed {
+  text-align: center;
+}
+
+.filter-value .form-radios {
+  margin-bottom: 10px;
+  clear: both;
+  overflow: hidden;
+}
+
+td.icon-mapping-icon input.form-radio {
+  position: absolute;
+  left: -9999px;
+}
+
+td.icon-mapping-icon .form-item.form-type-radios .form-radios .form-type-radio {
+  margin-right: 5px;
+}
+
+/* Remove custom radio widged added by Shiny theme. */
+td.icon-mapping-icon input.form-radio + label:before {
+  display: none;
+}
+td.icon-mapping-icon input.form-radio + label.option span {
+  width: 15px;
+  height: 10px;
+  text-align: center;
+}
+td.icon-mapping-icon input.form-radio + label.option {
+  padding: 3px;
+}
+td.icon-mapping-icon input.form-radio + label.option:hover {
+  padding: 2px;
+  border: 1px solid gray;
+}
+td.icon-mapping-icon input.form-radio.form-selected + label.option {
+  padding: 2px;
+  border: 1px solid white;
+  color: white;
+}
+
+.dataset-overrides > .form-item.form-type-select, .dataset-overrides > .form-item.form-type-item, .dataset-overrides > .form-item.form-type-textfield {
+  margin-left: 25px;
+}
+
+tr td.icon-mapping-value .form-item .description {
+  white-space: initial;
+}
+
+.button-refresh {
+  display: none;
+}

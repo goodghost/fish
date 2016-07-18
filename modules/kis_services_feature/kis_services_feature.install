@@ -1,0 +1,54 @@
+<?php
+
+
+/**
+ *  Define our cache table.
+ *  It's a copy of the standard cache table.
+ */
+function kis_services_feature_schema() {
+  $schema['cache_kis_services'] = drupal_get_schema_unprocessed('system', 'cache');
+  return $schema;
+}
+
+
+/**
+ * Creates queues for save quote services.
+ */
+function kis_services_feature_update_7001() {
+  // Create queue for Save Quote service
+  $save_quote_queue = DrupalQueue::get('kis_services_save_quote');
+  $save_quote_queue->createQueue();
+
+  // Create error queue for Save Quote service
+  $save_quote_queue_error = DrupalQueue::get('kis_services_save_quote_error');
+  $save_quote_queue_error->createQueue();
+}
+
+/**
+ * Creates queues for save payment services.
+ */
+function kis_services_feature_update_7002() {
+  // Create queue for Save Payment service
+  $save_quote_queue = DrupalQueue::get('kis_services_save_payment');
+  $save_quote_queue->createQueue();
+
+  // Create error queue for Save Payment service
+  $save_quote_queue_error = DrupalQueue::get('kis_services_save_payment_error');
+  $save_quote_queue_error->createQueue();
+}
+
+
+/**
+ * Create the missing kis_services cache table.
+ */
+function kis_services_feature_update_7003() {
+  // The schema was added after the module
+  // Check we don't alrady have tables installed.
+  if (db_table_exists('cache_kis_services') == FALSE) {
+    drupal_install_schema('kis_services_feature');
+    $message = t("Created cache table cache_kis_services.");
+  } else {
+    $message = t("Cache table cache_kis_services already exists.");
+  }
+  return $message;
+}

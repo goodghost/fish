@@ -1,0 +1,49 @@
+<?php
+/**
+ * @file
+ * Code for the FR Content Dashboard feature.
+ */
+
+include_once 'fr_content_dashboard.features.inc';
+
+/**
+ * Implements hook_menu_local_tasks_alter().
+ */
+function fr_content_dashboard_menu_local_tasks_alter(&$data, $router_item, $root_path) {
+  switch ($root_path) {
+    case 'admin/dashboards':
+      $item = menu_get_item('node/add/dashboard');
+      if ($item['access']) {
+        $item['title'] = t('Add new dashboard');
+        $data['actions']['output'][] = array(
+          '#theme' => 'menu_local_action',
+          '#link' => $item,
+        );
+      }
+      break;
+  }
+}
+
+/**
+ * Remove buttons to edit and style panel panes.
+ */
+function fr_content_dashboard_preprocess_panels_ipe_pane_wrapper(&$vars) {
+  $is_dashboard = isset($vars['display']->context['panelizer']->data->type) && $vars['display']->context['panelizer']->data->type == 'dashboard';
+  if ($is_dashboard) {
+    $vars['links']['delete']['title'] = '<span>' . t('Remove this') . '</span>';
+  }
+}
+
+/**
+ * Remove button to edit style of panel regions.
+ */
+function fr_content_dashboard_preprocess_panels_ipe_add_pane_button(&$vars) {
+  $is_dashboard = isset($vars['display']->context['panelizer']->data->type) && $vars['display']->context['panelizer']->data->type == 'dashboard';
+  if (isset($vars['links']['add-pane']['title']) && $is_dashboard) {
+    $renderer = $vars['renderer'];
+    $region_id = $vars['region_id'];
+
+    $vars['links']['add-pane']['title'] = '<span>' . t('Add') . '</span>';
+    $vars['links']['add-pane']['href'] = $renderer->get_url('add-pane', $region_id) . '/node/existing_node';
+  }
+}

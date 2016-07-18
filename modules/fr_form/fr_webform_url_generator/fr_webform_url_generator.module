@@ -1,0 +1,135 @@
+<?php
+
+/*
+ * To use webform picker you need to:
+ * 1. Add a '.form-type-url-generator' class to a form element.
+ * 2. Load a webform picker view.
+ * 3. Attach a webform picker to the page where field with '.form-type-url-generator' class exists, for example as form prefix.
+
+ * 1. ADDING CLASS:
+ * $form['example_field']['attributes'] = array('class' => array('form-type-url-generator'));
+
+ * 2.LOADING WEBFORM PICKER VIEW:
+ * // Load a view
+ * $view = fr_webform_url_generator_get_webform_picker_view();
+
+ * 3. ATTACH VIEW TO A FORM/PAGE
+ * $form['#prefix'] = $view;
+
+ * NOTE! Do not attach a view to any of form elements (fields, markups). The webform picker view contains 
+ * exposed filters form and if you try to attach it to any form element, like field, markup or any other
+ * drupal will automatically remove <form> tags from the view, so the exposed filters won't be working anymore.
+ * Prefix is a safe place to attach it because it's rendered outside of actuall form tag.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function fr_webform_url_generator_menu() {
+   $items['fr_webform_list'] = array(
+     'title' => 'List',
+     'page callback' => 'fr_webform_url_generator_list',
+     'delivery callback' => 'fr_webform_url_generator_ajax_callback_list',
+     'access callback' => TRUE,
+     'type' => MENU_CALLBACK,
+   );
+
+   $items['fr_webform_node_data/%'] = array(
+     'title' => 'Node data',
+     'page arguments' => array(1),
+     'access arguments' => array(1),
+     'page callback' => 'fr_webform_url_generator_node_data',
+     'delivery callback' => 'fr_webform_url_generator_ajax_callback_node_data',
+     'access callback' => TRUE,
+     'type' => MENU_CALLBACK,
+   );
+  return $items;
+}
+
+/**
+ * Implements hook_views_api().
+ */
+function fr_webform_url_generator_views_api() {
+  return array(
+    'api' => 3,
+    'path' => drupal_get_path('module', 'fr_webform_url_generator').'/includes',
+  );
+}
+
+/**
+ * Callback function for fr_webform_url_generator_menu() fr_webform_list item.
+ */
+function fr_webform_url_generator_list() {
+  $view = views_get_view('webform_picker');
+  $view->set_display('block');
+  $view->pre_execute();
+  $view->execute();
+  $rendered_view = $view->render();
+  return $rendered_view;
+}
+
+/**
+ * Callback function for fr_webform_url_generator_menu() fr_webform_node_data/% item.
+ */
+function fr_webform_url_generator_node_data($nid) {
+  $node = node_load($nid);
+  if (is_object($node) && isset($node->fr_form_operations) && !empty($node->fr_form_operations)) {
+    
+    // Get available operations
+    $options['operations'] = unserialize($node->fr_form_operations);
+    $labeled_operations = fr_form_available_operations_options();
+    foreach ($options['operations'] as $key => $value) {
+      $options['operations'][$key] = $labeled_operations[$key];
+    }
+
+    // Get primary key
+    $category_fields = fr_form_get_fields($node->fr_form_category_objects, $node->fr_form_object);
+    if (is_array($category_fields)) {
+      $category_fields = $category_fields['fields'];
+      $options['primary_key'] = fr_form_get_primary_key($category_fields);
+    }
+    
+    // Get category or object
+    $options['category'] = isset($node->fr_form_category_objects) ? $node->fr_form_category_objects : NULL;
+    if ($options['category'] == '1') {
+      $options['objects'] = isset($node->fr_form_object) ? $node->fr_form_object : NULL;
+    } else {
+      $options['objects'] = isset($node->fr_form_object) ? unserialize($node->fr_form_object) : NULL;
+    }
+    return json_encode($options);
+  } else {
+    return NULL;
+  }
+}
+
+/**
+ * Delivery ajax callback (returns only needed html without rest of the page).
+ */
+function fr_webform_url_generator_ajax_callback_list($page_callback_result) {
+  print $page_callback_result;
+}
+
+/**
+ * Delivery ajax callback 
+ */
+function fr_webform_url_generator_ajax_callback_node_data($page_callback_result) {
+  print $page_callback_result;
+}
+
+/**
+ * Assign webform picker view as prefix to make it available for choose
+ */
+function fr_webform_url_generator_form_alter(&$form, &$form_state, $form_id) {
+  if ($form_id == 'report_node_form') {
+    $form['#prefix'] = fr_webform_url_generator_get_webform_picker_view();
+  }
+}
+
+function fr_webform_url_generator_get_webform_picker_view() {
+  $block = module_invoke('views', 'block_view', 'webform_picker-block');
+  $content = '';
+  $content .= '<div id="form-picker">';
+  $content .= render($block['content']);
+  $content .= '</div>';
+  return $content;
+}

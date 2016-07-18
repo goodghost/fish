@@ -1,0 +1,24 @@
+/* Icon for "Cases" menu item */
+.navbar-icon-cases:before {
+  content: "\f07c" !important;
+}
+
+#fr-case-search .form-item-ref-number {
+  float: left;
+  margin-right: 6px;
+  margin-top: 4px;
+}
+
+#fr-case-search .form-text {
+  border: 1px solid #4F5357;
+  padding: 5px;
+  text-transform: uppercase;
+}
+
+#fr-case-search .form-type-textfield label {
+  margin-bottom: 5px;
+}
+
+#navbar-administration.navbar-oriented .navbar-bar .navbar-tab.navbar-tab.navbar-tab--case-search > *:hover {
+  background: none;
+}

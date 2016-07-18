@@ -1,0 +1,75 @@
+<?php
+
+/**
+ * @file
+ *
+ * Installation file for FR Form module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function fr_form_schema() {
+
+  // FR Form
+  $schema['fr_form'] = array(
+    'description' => 'Table to track simple force settings for a single webform node',
+    'fields' => array(
+      'nid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'The webform node id this settings relate to',
+      ),
+      'vid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'The webform revision id this settings relate to',
+      ),
+      'object' => array(
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => FALSE,
+        'default' => NULL,
+        'description' => 'The target FISH object for this webform node.',
+      ),
+      'object_category' => array(
+        'type' => 'varchar',
+        'length' => '60',
+        'not null' => FALSE,
+        'default' => NULL,
+        'description' => 'Information about main category',
+      ),
+    ),
+    'primary key' => array('nid', 'vid'),
+  );
+
+  // Available operations
+  $schema['fr_form_operations'] = array(
+    'description' => 'Table for available operations',
+    'fields' => array(
+      'nid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'The webform node id this settings relate to',
+      ),
+      'vid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'The webform revision id this settings relate to',
+      ),
+      'operation' => array(
+        'type' => 'int',
+        'not null' => FALSE,
+        'default' => NULL,
+        'description' => 'Available operation (edit or add or view) for webform.',
+      ),
+    ),
+    'primary key' => array('nid', 'vid', 'operation'),
+  );
+
+  return $schema;
+}

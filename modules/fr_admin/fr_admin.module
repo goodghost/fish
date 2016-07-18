@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the FR Admin feature.
+ */
+
+include_once 'fr_admin.features.inc';

@@ -1,0 +1,23 @@
+//SASS version used 3.4.13
+
+//Partials
+@import 'partials/variables';
+@import 'partials/general';
+@import 'partials/mixins';
+
+//Import base structure elements
+@import 'page/header';
+@import 'page/container';
+@import 'page/footer';
+
+//import regions for page
+@import 'page/regions/report';
+@import 'page/regions/dashboard';
+@import 'page/regions/case';
+@import 'page/regions/user';
+@import 'page/regions/group';
+@import 'page/regions/wallboard';
+@import 'page/regions/dashboard_block';
+@import 'page/regions/webform';
+@import 'page/regions/webform_picker';
+

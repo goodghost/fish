@@ -1,0 +1,79 @@
+/* mixin for button style - defaule blue
+  optional parameters:
+   - $icon-code eg. '\f21e'
+   - $small true/false - bigger or smaller padding
+   - $background
+   - $color - text color
+*/
+@mixin button($icon-code : '', $small : true, $background : $blue, $color : $white, $font : $fa) {
+  border-radius: 2px;
+  background: $background;
+  display: inline-block;
+  @if $small == true {
+    padding: 2px 20px;
+    font-size: 16px;
+    @if $color == $white {
+      color: $color;
+    } @else {
+      color: $text-default;
+    }
+  } 
+  @else {
+    @if $color {
+      color: $color;
+    } @else {
+      color: $white;
+    }
+    padding: 11px 20px;
+    font-size: 18px;
+  }
+  font-weight: 300;
+  box-shadow: none;
+  &:hover {
+    text-shadow: none;
+    background: lighten($background, 5%);
+  }
+  @if $icon-code {
+    &:before {
+      content: $icon-code !important;
+      font-family: $font;
+      margin-right: 6px;
+    }
+  }
+}
+
+/* Clearfix mixin */
+@mixin clearfix() {
+  &:before,
+  &:after {
+    content: "";
+    display: table;
+  }
+  &:after {
+    clear: both;
+  }
+}
+
+/* Icon before mixin */
+@mixin icon_before($icon-code : '', $color : $blue, $margin_right : 7px, $size : 1.2em, $font : $fa) {
+  &:before {
+    content: $icon-code !important;
+    font-family: $font;
+    color: $color;
+    margin-right: $margin_right;
+    font-size: $size;
+    font-weight: 200;
+  }
+}
+
+/* Icon after mixin */
+@mixin icon_after($icon-code : '', $color : $blue, $margin_left : 7px, $size : 1.2em, $font : $fa) {
+  &:after {
+    content: $icon-code !important;
+    font-family: $font;
+    color: $color;
+    margin-left: $margin_left;
+    font-size: $size;
+    font-weight: 200;
+  }
+}

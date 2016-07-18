@@ -1,0 +1,9 @@
+.form-colorpicker {
+  text-align: center;
+}
+.colorpicker-picker {
+  position: absolute;
+  z-index: 999;
+  background: silver;
+  box-shadow: 0 0 17px gray;
+}

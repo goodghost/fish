@@ -1,0 +1,62 @@
+name = Fish Reporting
+description = Standard installation profile for Fish Reporting.
+core = 7.x
+exclusive = TRUE
+
+; System Requirements
+php_memory_limit = 128M
+
+; Core and contrib modules
+dependencies[] = ctools
+dependencies[] = entity
+dependencies[] = entityreference
+dependencies[] = features
+dependencies[] = field_collection
+dependencies[] = file
+dependencies[] = image
+dependencies[] = libraries
+dependencies[] = link
+dependencies[] = list
+dependencies[] = locale
+dependencies[] = mediaelement
+dependencies[] = media_wysiwyg
+dependencies[] = memcache
+dependencies[] = menu
+dependencies[] = number
+dependencies[] = options
+dependencies[] = strongarm
+dependencies[] = syslog
+dependencies[] = views
+dependencies[] = webform
+dependencies[] = webform_layout
+dependencies[] = wysiwyg
+dependencies[] = jquery_update
+
+
+
+; Custom modules
+dependencies[] = fr_admin
+dependencies[] = fr_case
+dependencies[] = fr_print_request
+dependencies[] = fr_content
+dependencies[] = fr_core
+dependencies[] = fr_dataset_field
+dependencies[] = fr_form
+dependencies[] = fr_webform_url_generator
+dependencies[] = fr_groups
+dependencies[] = fr_migrate
+dependencies[] = fr_navbar
+dependencies[] = fr_services
+dependencies[] = fr_user
+dependencies[] = fr_work_assignment
+;dependencies[] = fr_wysiwyg
+
+; Content types
+dependencies[] = fr_content_dashboard
+dependencies[] = fr_content_group
+dependencies[] = fr_content_report
+dependencies[] = fr_content_wallboard
+dependencies[] = fr_content_dashboard_block
+
+; Permissions
+dependencies[] = fr_permissions

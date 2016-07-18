@@ -1,0 +1,42 @@
+{
+  "printRequests": [
+    {
+      "reason": "court",
+      "courtUrn": "12345",
+      "numberOfCopies": "2",
+      "product": "cd",
+      "deliveryType": "internal",
+      "urgency": "urgent",
+      "targetDate": "2015-05-15",
+      "defenderName": "Rafal",
+      "requestingOfficer": "Kojak",
+      "deliveryAddress": "White House, Washington",
+      "requestId": "1",
+      "caseId": "81",
+      "scene": "2",
+      "ownerId": "",
+
+      "createdDate": "2015-05-15",
+      "status": "pending"
+    },
+    {
+      "reason": "fun",
+      "courtUrn": "54321",
+      "numberOfCopies": "1",
+      "product": "5x7",
+      "deliveryType": "pickup",
+      "urgency": "regular",
+      "targetDate": "2015-06-22",
+      "defenderName": "Dawid",
+      "requestingOfficer": "Sherlock Holmes",
+      "deliveryAddress": "Big Ben, London",
+
+      "requestId": "2",
+      "caseId": "81",
+      "scene": "2",
+      "ownerId": "",
+      "createdDate": "2015-05-15",
+      "status": "pending"
+    }
+  ]
+}

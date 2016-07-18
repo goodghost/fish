@@ -1,0 +1,83 @@
+//Styles for main container
+
+/* modal style */
+div.ctools-modal-content {
+  background: $gray-base;
+  border-radius: 0;
+
+  //header style
+  .modal-header {
+    background: lighten($gray-base, 5%);
+    border-radius: 0;
+
+    //close link
+    a.close {
+      background: none;
+      color: $link;
+      text-transform: lowecase;
+      &:before {
+        content: "\f057";
+        font-family: $fa;
+        color: $text-default;
+        margin-right: 5px;
+      }
+    }
+
+    //title
+    .modal-title {
+      color: $text-default;
+      text-shadow: none;
+    }
+  }
+
+  .modal-content {
+    color: $text-default;
+  }
+}
+
+/* google table */
+.google-visualization-table {
+  width: 100%;
+  border: none !important;
+  .google-visualization-table-div-page {
+    background: transparent !important;
+  }
+  .google-visualization-table-table {
+    background: transparent;
+    .table-header {
+      background: darken($gray-base, 6%);
+    }
+  }
+  .google-visualization-table-th {
+    &.gradient {
+      background: transparent;
+    }
+    &.sort-ascending,
+    &.sort-descending {
+      background: darken($gray-base, 6%);
+    }
+    .google-visualization-table-sortind {
+      color: $text-default;
+      float: right;
+    }
+  }
+
+  tr {
+    &.even {
+      .google-visualization-table-td.sorted {
+        background: darken($gray-base, 2%);
+      }
+    }
+    &.odd {
+      .google-visualization-table-td.sorted {
+        background: lighten($gray-base, 2%);
+      }
+    }
+  }
+}
+#branding {
+  background: none !important;
+ .branding-inner {
+    color: $text-default;
+  }
+}

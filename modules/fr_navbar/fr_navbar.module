@@ -1,0 +1,311 @@
+<?php
+/**
+ * @file
+ * The Mobile Friendly Navigation Toolbar Add-ons module.
+ *
+ * Provides "Add content" and "Devel" menu items for Mobile Friendly Navigation Toolbar (navbar).
+ */
+
+/**
+ * Implements hook_navbar().
+ */
+function fr_navbar_navbar() {
+  $items = array();
+
+  if (module_exists('devel')) {
+    // Links to switch user account.
+    if (user_access('switch users')) {
+      $users_tree = array(
+        '#sorted' => TRUE,
+        '#theme_wrappers' => array(
+          'menu_tree__devel',
+        ),
+      );
+
+      // Add Devel module switch user links.
+      $switch_links = module_invoke('devel', 'switch_user_list');
+      if (!empty($switch_links) && count($switch_links) > 1) {
+        foreach ($switch_links as $uid => $link) {
+          $users_tree[] = array(
+            '#title' => $link['title'],
+            '#description' => $link['attributes']['title'],
+            '#theme' => 'menu_link__devel',
+            '#href' => $link['href'],
+            '#below' => '',
+            '#attributes' => array(),
+            '#localized_options' => array(
+              'attributes' => $link['attributes'] + array('class' => array('navbar-menu-item')),
+              'query' => $link['query'],
+              'html' => TRUE,
+            ),
+          );
+        }
+      }
+      $items['switch-user'] = array(
+        '#type' => 'navbar_item',
+        'tab' => array(
+          '#type' => 'link',
+          '#title' => 'Switch user',
+          '#href' => '',
+          '#options' => array(
+            'attributes' => array(
+              'title' => 'Switch user',
+              'class' => array('navbar-icon', 'navbar-icon-switch-user'),
+            ),
+          ),
+        ),
+        'tray' => array(
+          '#heading' => 'Switch user',
+          'menu' => $users_tree,
+        ),
+      );
+    }
+
+    // Devel menu.
+    if (user_access('access devel information')) {
+      $tree = menu_tree('devel');
+
+      foreach ($tree as $i => $item) {
+        if (!is_numeric($i)) {
+          continue;
+        }
+        $tree[$i]['#localized_options']['attributes']['class'][] = 'navbar-menu-item';
+      }
+      $items['devel'] = array(
+        '#type' => 'navbar_item',
+        'tab' => array(
+          '#type' => 'link',
+          '#title' => 'Devel',
+          '#href' => 'devel/settings',
+          '#options' => array(
+            'attributes' => array(
+              'title' => 'Development',
+              'class' => array('navbar-icon', 'navbar-icon-devel'),
+            ),
+          ),
+        ),
+        'tray' => array(
+          '#heading' => 'Development',
+          'development_menu' => $tree,
+        ),
+      );
+    }
+  }
+
+  $query = db_select('node_type', 'nt')
+    ->addTag('node_type_access')
+    ->fields('nt')
+    ->orderBy('nt.name', 'ASC');
+
+  $links = array();
+  foreach ($query->execute() as $node_type) {
+    if (user_access('create ' . $node_type->type. ' content')) {
+      $link = '<div class="navbar-box">';
+      $link .= l($node_type->name,
+        'node/add/' . str_replace('_', '-', $node_type->type),
+        array('attributes' => array(
+          'title' => $node_type->description,
+          'class' => array(
+            'navbar-menu-item',
+            'navbar-icon',
+            'navbar-icon-' . strtolower(str_replace(' ', '-', $node_type->name)),
+          ),
+        ))
+      );
+      $link .= '</div>';
+
+      $links[] = $link;
+    }
+  }
+
+  if ($links) {
+    $items['add_content'] = array(
+      '#type' => 'navbar_item',
+      'tab' => array(
+        '#type' => 'link',
+        '#title' => 'Add content',
+        '#href' => 'node/add',
+        '#options' => array(
+          'html' => FALSE,
+          'attributes' => array(
+            'title' => 'Add content',
+            'class' => array('navbar-icon', 'navbar-icon-add-content'),
+          ),
+        ),
+      ),
+      'tray' => array(
+        '#heading' => 'Add content (types)',
+        'add_content_menu' => array(
+          '#theme' => 'item_list',
+          '#items' => $links,
+          '#attributes' => array(
+            'class' => array('menu', 'navbar-menu-add-content', 'navbar-menu-processed', 'navbar-menu-root', 'navbar-root'),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Logout.
+  $items['logout'] = array(
+    '#type' => 'navbar_item',
+    '#weight' => 1000,
+    '#wrapper_attributes' => array('class' => array('navbar-tab--right')),
+    '#access' => user_is_logged_in(),
+    'tab' => array(
+      '#type' => 'link',
+      '#title' => 'Log out',
+      '#href' => 'user/logout',
+      '#options' => array(
+        'html' => FALSE,
+        'attributes' => array(
+          'class' => array('navbar-icon', 'navbar-icon-logout'),
+        ),
+      ),
+    ),
+  );
+
+  return $items;
+}
+
+
+/**
+ * Implements hook_navbar_alter().
+ */
+function fr_navbar_navbar_alter(&$items) {
+  if (!isset($items['administration']['tray']['navbar_administration']['administration_menu'])) {
+    return;
+  }
+
+  global $user;
+  $account = user_load($user->uid);
+
+  $items['user']['#weight'] = 1001;
+  $items['user']['#wrapper_attributes'] = array('class' => array('navbar-tab--right'));
+
+  if ($user_picture = fr_navbar_user_picture(array('account' => $account))) {
+    $items['user']['tab']['#title'] = $user_picture . $items['user']['tab']['#title'];
+    $items['user']['tab']['#options'] = array(
+      'html' => TRUE,
+      'attributes' => array(
+        'class' => array('navbar-icon', 'navbar-user-picture'),
+      ),
+    );
+  }
+
+  if ($logo = theme_get_setting('logo')) {
+    $logo_image = theme('image', array('path' => $logo));
+    //create home page item with logo linked to home page
+    $items['home']['tab']['#title'] = $logo_image;
+    $items['home']['tab']['#options'] = array(
+      'html' => TRUE,
+      'attributes' => array(
+        'title' => t('Home'),
+        'class' => array('navbar-logo'),
+      ),
+    );
+  }
+
+  // Loop over each root link in navbar and check if any of child is pointing to empty page.
+  foreach ($items['administration']['tray']['navbar_administration']['administration_menu'] as $mlid => $item) {
+    if (isset($item['#href']) && $item['#href'] == 'admin/structure' && empty($item['#below'])) {
+      unset($items['administration']['tray']['navbar_administration']['administration_menu'][$mlid]);
+    }
+    elseif (!empty($item['#below'])) {
+      $hide = TRUE;
+      foreach ($item['#below'] as $sub_mlid => $subitem) {
+        // Get access argument (permission) of menu link.
+        if (isset($subitem['#original_link'])) {
+          list($perm) = unserialize($subitem['#original_link']['access_arguments']);
+        }
+        else {
+          $perm = NULL;
+        }
+
+        // This is empty link.
+        if (empty($subitem['#below']) && $perm == 'access navbar') {
+          unset($items['administration']['tray']['navbar_administration']['administration_menu'][$mlid]['#below'][$sub_mlid]);
+        }
+        // This is not empty link and user has access to that page.
+        elseif (isset($subitem['#title']) && $perm != 'access navbar') {
+          $hide = FALSE;
+        }
+      }
+
+      // Hide root level link if all child links are empty.
+      if ($hide) {
+        unset($items['administration']['tray']['navbar_administration']['administration_menu'][$mlid]);
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_menu_alter().
+ */
+function fr_navbar_menu_alter(&$items) {
+  // @TODO: instead use admin_menu.map.inc
+  foreach ($items as &$item) {
+    if (isset($item['access arguments']) && $item['access arguments'] == array('access administration pages')) {
+      $item['access arguments'] = array('access navbar');
+    }
+  }
+}
+
+/**
+ * Implements hook_library_alter().
+ */
+function fr_navbar_library_alter(&$libraries, $module) {
+  if ($module == 'navbar' && isset($libraries['navbar'])) {
+    $path = drupal_get_path('module', 'fr_navbar');
+
+    // CSS
+    $libraries['navbar']['css'][] = array(
+      'data' => '//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css',
+      'type' => 'external',
+    );
+    $libraries['navbar']['css'][] = "$path/css/fr_navbar.css";
+    $libraries['navbar']['css'][] = "$path/css/fr_navbar.icons.css";
+
+    // JS
+    $libraries['navbar']['js'][$path . '/js/fr_navbar.js'] = array();
+  }
+}
+
+/**
+ * Helper function to retrieve user picture.
+ *
+ * @see template_preprocess_user_picture()
+ * @param $variables
+ * @return string
+ * @throws \Exception
+ */
+function fr_navbar_user_picture($variables) {
+  $user_picture = '';
+  if (variable_get('user_pictures', 0)) {
+    $account = $variables['account'];
+    if (!empty($account->picture)) {
+      if (is_numeric($account->picture)) {
+        $account->picture = file_load($account->picture);
+      }
+      if (!empty($account->picture->uri)) {
+        $filepath = $account->picture->uri;
+      }
+    }
+    elseif (variable_get('user_picture_default', '')) {
+      $filepath = variable_get('user_picture_default', '');
+    }
+    if (isset($filepath)) {
+      $alt = t("@user's picture", array('@user' => format_username($account)));
+      // If the image does not have a valid Drupal scheme (for eg. HTTP),
+      // don't load image styles.
+      if (module_exists('image') && file_valid_uri($filepath) && $style = variable_get('user_picture_style', '')) {
+        $user_picture = theme('image_style', array('style_name' => $style, 'path' => $filepath, 'alt' => $alt, 'title' => $alt));
+      }
+      else {
+        $user_picture = theme('image', array('path' => $filepath, 'alt' => $alt, 'title' => $alt));
+      }
+    }
+  }
+  return $user_picture;
+}

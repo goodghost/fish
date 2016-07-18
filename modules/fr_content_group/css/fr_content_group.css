@@ -1,0 +1,4 @@
+/* Icon for "Add content" menu item */
+.navbar-icon-group:before {
+  content: "\f0c0" !important;
+}

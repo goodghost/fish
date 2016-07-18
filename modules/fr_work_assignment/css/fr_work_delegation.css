@@ -1,0 +1,47 @@
+/* Icon for "Work Assignment" menu item */
+.navbar-icon-work-assignment:before {
+  content: "\f0ec" !important; /* f046, f047, f0ae */
+}
+
+.dashboard-column {
+  width: 50%;
+  float: left;
+  min-height: 12em;
+}
+.dashboard-column-droppable {
+  padding-bottom: 100px;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.dashboard-card {
+  margin: 0 1em 1em 0;
+  padding: 0.3em;
+  border: 1px solid white;
+  cursor: move;
+  position: relative;
+}
+.dashboard-card .ajax-progress-wrapper {
+  position: absolute;
+  top: 5px;
+  right: 10px;
+}
+.dashboard-card.selected {
+  border-color: red;
+}
+.dashboard-column-droppable.ui-state-active {
+  background: silver;
+}
+.dashboard-card-placeholder {
+  border: 1px dotted silver;
+  margin: 0 1em 1em 0;
+  height: 50px;
+}
+.card-info {
+  clear: both;
+  display: none;
+}

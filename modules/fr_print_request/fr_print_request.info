@@ -1,0 +1,8 @@
+name = FR Print Request
+description = Functionality related to Fish album print requests.
+package = Fish Reporting
+core = 7.x
+
+dependencies[] = fr_case
+
+files[] = includes/PrintRequestClient.inc

@@ -1,0 +1,11 @@
+name = FR Case
+description = Functionality related to Fish cases.
+package = Fish Reporting
+core = 7.x
+
+stylesheets[all][] = css/fr_case.css
+
+dependencies[] = fr_services
+
+files[] = includes/CaseServiceClient.inc
+files[] = includes/ImageDataServiceClient.inc

@@ -1,0 +1,125 @@
+<?php
+/**
+ * @file
+ * Code for the KIS Services feature.
+ */
+
+
+/**
+ * Implements hook_menu().
+ */
+function kis_services_feature_menu() {
+  // Example: /api/translations/pl?school=LOL&course=ENGVAC&accommodation=LSRKLSB&extra[]=XMAS&extra[]=MIILS&extra[]=TSSNA
+  $items['api/translations/%'] = array(
+    'title' => 'Fetch translations for entities',
+    'page callback' => 'kis_services_feature_translations',
+    'page arguments' => array(2),
+    'delivery callback' => 'kis_services_feature_deliver',
+    'access arguments' => array('access content')
+  );
+
+  return $items;
+}
+
+/**
+ * Returns translations for entities given the marketcode.
+ *
+ * @param $country
+ */
+function kis_services_feature_translations($market_code) {
+  // First, check if we requested any allowed entities.
+  $allowed_resources = array(
+    'school' => array('school'),
+    'course' => array('course'),
+    'accommodation' => array('accommodation', 'homestay'),
+    'extra' => array('insurance', 'transfer', 'fee'));
+  $requested_resources = array_intersect(array_keys($_GET), array_keys($allowed_resources));
+  if (empty($requested_resources)) {
+    return MENU_NOT_FOUND;
+  }
+
+  // Secondly, try to find related language.
+  $language = NULL;
+  $languages = language_list();
+  if (array_key_exists($market_code, $languages)) {
+    $language = $languages[$market_code];
+  }
+  else {
+    $code_components = explode('-', $market_code);
+    if (array_key_exists($code_components[0], $languages)) {
+      $language = $languages[$code_components[0]];
+    }
+  }
+
+  if (!$language) {
+    return MENU_NOT_FOUND;
+  }
+
+  // For each requested entity, please query the database for values.
+  $response = array();
+  $entity_types = array();
+  foreach($requested_resources as $resource_type) {
+    // Fetch data from the database
+    $requested_ids = is_array($_GET[$resource_type]) ? $_GET[$resource_type] : array($_GET[$resource_type]);
+    $query = new EntityFieldQuery();
+    $query->entityCondition('entity_type', 'node')
+      ->entityCondition('bundle', array($allowed_resources[$resource_type]), 'IN')
+      ->fieldCondition('field_external_id', 'value', $requested_ids, 'IN')
+      ->propertyCondition('status', 1)
+      ->range(0, 10);
+    $result = $query->execute();
+    $news_items = array();
+    if (isset($result['node'])) {
+      $news_items_nids = array_keys($result['node']);
+      $news_items = entity_load('node', $news_items_nids);
+
+    }
+
+    // Add fields to response.
+    foreach ($news_items as $nid => $node) {
+      $candidate_language = entity_translation_hierarchy_get_candidate($node, 'node', $language->language);
+      if (empty($response[$resource_type])) {
+        $response[$resource_type] = array();
+      }
+
+      $response[$resource_type][] = array(
+        'id' => $node->field_external_id[LANGUAGE_NONE][0]['value'],
+        'name' => $node->title_field[$candidate_language][0]['value'],
+        'description' => $node->body[$candidate_language][0]['safe_summary'],
+      );
+    }
+  }
+
+  return $response;
+}
+
+/**
+ * Delivery callback for KIS Services. Ensure we've got proper JSON response.
+ *
+ * @param $page_callback_result
+ */
+function kis_services_feature_deliver($page_callback_result) {
+  if ($page_callback_result == MENU_NOT_FOUND) {
+    drupal_add_http_header('Status', '404 Not Found');
+    return;
+  }
+
+  if ($page_callback_result == MENU_ACCESS_DENIED) {
+    drupal_add_http_header('Status', '403 Forbidden');
+    return;
+  }
+
+  drupal_add_http_header('Content-Type', 'application/json');
+  drupal_add_http_header('Cache-Control', 'no-cache, must-revalidate, post-check=0, pre-check=0');
+  print drupal_json_encode($page_callback_result);
+}
+
+
+/*
+ * Implements hook_flush_caches().
+ *
+ * Ensure the kis_services cache is expired when we clear all the caches.
+ */
+function kis_services_feature_flush_caches() {
+  return array('cache_kis_services');
+}

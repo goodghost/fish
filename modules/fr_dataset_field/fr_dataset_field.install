@@ -1,0 +1,53 @@
+<?php
+
+/**
+ * @file Install/Upgrade code for fr_dataset_field.
+ */
+
+/**
+ * Implements hook_field_schema().
+ */
+function fr_dataset_field_field_schema($field) {
+  $columns = array(
+    'dataset' => array(
+      'description' => 'Name of dataset table.',
+      'type' => 'varchar',
+      'length' => 255,
+      'not null' => TRUE,
+    ),
+    // Fields will be stored as serialized array.
+    // Where array key will be field name and array value will be bool indicator
+    // if this field is displayed in report.
+    // Example of array before it's serialized and saved to DB:
+    // array('first_name' => TRUE, 'last_name' => FALSE);
+    'fields' => array(
+      'type' => 'text',
+      'size' => 'big',
+      'description' => 'Fields to display.',
+      'serialize' => TRUE,
+      'serialized default' => 'a:0:{}',
+    ),
+    'filters' => array(
+      'type' => 'text',
+      'size' => 'big',
+      'description' => 'Filters used to query datasets.',
+      'serialize' => TRUE,
+      'serialized default' => 'a:0:{}',
+    ),
+    'display_type' => array(
+      'description' => 'Display type used to present results.',
+      'type' => 'varchar',
+      'length' => 255,
+    ),
+    'display_settings' => array(
+      'type' => 'text',
+      'size' => 'big',
+      'description' => 'Settings related to displaying the results.',
+      'serialize' => TRUE,
+      'serialized default' => 'a:0:{}',
+    ),
+  );
+  return array(
+    'columns' => $columns,
+  );
+}

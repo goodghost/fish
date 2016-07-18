@@ -1,0 +1,77 @@
+/* Styles for dashboards */
+
+.node-type-dashboard {
+  /* modal style */
+  div.ctools-modal-content {
+    .panels-layouts-category  {
+      color: $text-default;
+    }
+
+    form#panels-change-layout {
+      input#edit-submit {
+        @include button('', false);
+      }
+    }
+  }
+
+  /* panels-ipe-controls */
+  #panels-ipe-control-container {
+    div.panels-ipe-button-container {
+      float: right;
+      div.panels-ipe-pseudobutton-container a.panels-ipe-startedit {
+        @include button('\f013');
+      }
+      div.panels-ipe-pseudobutton-container a.panels-ipe-change-layout {
+        @include button('\f009');
+      }
+    }
+  }
+}
+
+/* 2x2 - grid */
+.panel-top-left, 
+.panel-top-right, 
+.panel-bottom-left, 
+.panel-bottom-right {
+  width: 49.5%;
+  padding: 1.5%;
+}
+.panel-dashboard.panel-panel {
+  height: 96%;
+}
+
+.panel-dashboard.panel-two-by-two {
+  .panel-top-left, 
+  .panel-top-right, 
+  .panel-bottom-left, 
+  .panel-bottom-right {
+    width: 49%;
+    padding: 1.5%;
+    margin-right: 1%;
+  }
+  .panel-panel {
+    height: 96%;
+  }
+}
+
+/* List of dashboards */
+.page-admin-dashboards {
+  .action-links li a {
+    @include button("\f055", false);
+  }
+}
+
+#panels-change-layout {
+  .panel-dashboard {
+    .panel-panel {
+      height: 97%;
+    }
+    .panel-top-left, 
+    .panel-top-right, 
+    .panel-bottom-left, 
+    .panel-bottom-right {
+      width: 49%;
+      margin-right: 1%;
+    }
+  }
+}

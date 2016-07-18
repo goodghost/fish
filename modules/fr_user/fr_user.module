@@ -1,0 +1,392 @@
+<?php
+/**
+ * @file
+ * Code for the fr User feature.
+ */
+
+include_once 'fr_user.features.inc';
+
+/**
+ * Implements hook_init().
+ */
+function fr_user_init() {
+  if (!drupal_is_front_page() && !user_is_logged_in() && $_GET['q'] != 'user/logout' && $_GET['q'] != 'user/password') {
+    drupal_goto('<front>', array('query' => drupal_get_destination()));
+  }
+}
+
+/**
+ * Implements hook_migrate_api().
+ */
+function fr_user_migrate_api() {
+  return array(
+    'api' => 2,
+    'migrations' => array(
+      'Users' => array(
+        'class_name' => 'UsersMigration',
+        'group_name' => 'demo',
+      ),
+    ),
+  );
+}
+
+/**
+ * Implements hook_menu().
+ */
+function fr_user_menu() {
+  $items = array();
+  $items['home'] = array(
+    'page callback' => 'fr_user_home_page',
+    'access callback' => TRUE,
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_views_api().
+ */
+function fr_user_views_api() {
+  return array(
+    'api' => 3,
+    'path' => drupal_get_path('module', 'fr_user') . '/views',
+  );
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function fr_user_form_user_login_alter(&$form, $form_state, $form_id) {
+  // Hide descriptions.
+  unset($form['name']['#description']);
+  unset($form['pass']['#description']);
+
+  $form['#validate'] = array('fr_user_form_user_login_validate');
+
+  //add js file and terms and conditions as js setting
+  $terms_and_conditions = variable_get('terms_and_conditions');
+  if (!empty($terms_and_conditions)) {
+    $terms_and_conditions = nl2br($terms_and_conditions);
+  }
+  drupal_add_js(array('fr_user' => array('terms_and_conditions' => $terms_and_conditions)), 'setting');
+
+  //add js file
+  drupal_add_js(drupal_get_path('module', 'fr_user') . '/js/fr_user.js');
+}
+
+/**
+ * Validate user log in form.
+ */
+function fr_user_form_user_login_validate($form, &$form_state) {
+  $name = trim($form_state['values']['name']);
+  $password = trim($form_state['values']['pass']);
+
+  // Try to load by email.
+  $users = user_load_multiple(array(), array('mail' => $name, 'status' => '1'));
+  $account = reset($users);
+  if (!$account) {
+    // No success, try to load by name.
+    $users = user_load_multiple(array(), array('name' => $name, 'status' => '1'));
+    $account = reset($users);
+  }
+
+  // User exist in Drupal DB.
+  if (isset($account->uid)) {
+    if (fr_user_is_remote($account)) {
+      try {
+        $client = new LoginServiceClient();
+        $response = $client->login($name, $password);
+
+        if ($response['session']['status'] == 'Login Successful.') {
+          $account->data['remote_session_id'] = $response['session']['sessionid'];
+          $account->data['service_user'] = $response['session']['user'];
+
+          // Set up the user fields.
+          $user_data = array(
+            'pass' => $password,
+            'mail' => $response['session']['user']['email'],
+            'data' => $account->data,
+          );
+
+          // Update profile.
+          user_save($account, $user_data);
+          $form_state['uid'] = user_authenticate($name, $password);
+        }
+      }
+      catch (ServiceException $e) {
+        watchdog_exception('fr_user', $e);
+      }
+
+      // Login was unsuccessful.
+      if (empty($response['session']['status']) || (isset($response['session']['status']) && $response['session']['status'] !== 'Login Successful.')) {
+        form_set_error('name', t('Sorry, unrecognized username or password.'));
+        $reason = !empty($response['session']['reason']) ? $response['session']['reason'] : t('unknown');
+        watchdog('user', 'Login attempt failed for %user. Reason: %reason.', array('%user' => $name, '%reason' => $reason));
+      }
+    }
+    else {
+      // If account isn't a remote one then execute standard validation.
+      user_login_name_validate($form, $form_state);
+      user_login_authenticate_validate($form, $form_state);
+
+      // Probably this validation should be always executed because it check for flood.
+      user_login_final_validate($form, $form_state);
+    }
+  }
+  // User don't exist.
+  else {
+    try {
+      $client = new LoginServiceClient();
+      $response = $client->login($name, $password);
+
+      if ($response['session']['status'] == 'Login Successful.') {
+        $mail = $response['session']['user']['email'];
+
+        // Set up the user fields.
+        $user_data = array(
+          'name' => $name,
+          'mail' => $mail,
+          'pass' => $password,
+          'status' => 1,
+          'init' => $mail,
+          'roles' => array(
+            DRUPAL_AUTHENTICATED_RID => 'authenticated user',
+          ),
+          'data' => array(
+            'remote' => TRUE, // TODO: Create views handlers.
+            'remote_session_id' => $response['session']['sessionid'],
+            'service_user' => $response['session']['user'],
+          ),
+        );
+        // Create and log in new user.
+        user_save(NULL, $user_data);
+        $form_state['uid'] = user_authenticate($name, $password);
+      }
+    }
+    catch (ServiceException $e) {
+      watchdog_exception('fr_user', $e);
+    }
+
+    // Login was unsuccessful.
+    if (empty($response['session']['status']) || (isset($response['session']['status']) && $response['session']['status'] !== 'Login Successful.')) {
+      form_set_error('name', t('Sorry, unrecognized username or password.'));
+      $reason = !empty($response['session']['reason']) ? $response['session']['reason'] : t('unknown');
+      watchdog('user', 'Login attempt failed for %user. Reason: %reason.', array('%user' => $name, '%reason' => $reason));
+    }
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function fr_user_form_user_pass_alter(&$form, &$form_state, $form_id) {
+  $form['#validate'][] = 'fr_user_form_user_pass_validate';
+}
+
+/**
+ * Validate password reset.
+ */
+function fr_user_form_user_pass_validate($form, &$form_state) {
+  $name = trim($form_state['values']['name']);
+  // Try to load by email.
+  $users = user_load_multiple(array(), array('mail' => $name, 'status' => '1'));
+  $account = reset($users);
+  if (!$account) {
+    // No success, try to load by name.
+    $users = user_load_multiple(array(), array('name' => $name, 'status' => '1'));
+    $account = reset($users);
+  }
+
+  // Don't let remote users to reset their passwords.
+  // TODO: handle mail and username.
+  if (fr_user_is_remote($account)) {
+    form_set_error('name', t("Sorry, remote users can't reset password here."));
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function fr_user_form_user_profile_form_alter(&$form, &$form_state, $form_id) {
+  // Disable user's language selection
+  unset($form['locale']);
+
+  $account = $form['#user'];
+  
+  // Block form fields for remote users tha shouldn't be changed on Drupal side.
+  if (fr_user_is_remote($account)) {
+    $form['account']['current_pass']['#access'] = FALSE;
+
+    $form['account']['name']['#disabled'] = TRUE;
+    $form['account']['mail']['#disabled'] = TRUE;
+    $form['account']['pass']['#disabled'] = TRUE;
+  }
+}
+
+/**
+ * Implements hook_views_bulk_operations_form_alter().
+ */
+function fr_user_views_bulk_operations_form_alter(&$form, &$form_state, $vbo) {
+  // VBO: Block form fields for remote users tha shouldn't be changed on Drupal side.
+  if ($form_state['step'] == 'views_bulk_operations_config_form' && $form_state['entity_type'] == 'user') {
+    $properties_to_hide = array('name', 'mail', 'pass');
+    foreach ($properties_to_hide as $property) {
+      $form['properties'][$property]['#access'] = FALSE;
+      $form['properties']['show_value'][$property]['#access'] = FALSE;
+    }
+  }
+}
+
+/**
+ * Implements hook_field_widget_form_alter().
+ */
+function fr_user_field_widget_form_alter(&$element, &$form_state, $context) {
+  // Hide "Other groups" section.
+  if ($context['field']['field_name'] == 'og_user_node' && isset($element['admin'])) {
+    $element['admin']['#access'] = FALSE;
+  }
+}
+
+/**
+ * Menu callback: Displays a user homepage.
+ */
+function fr_user_home_page() {
+  global $user;
+  if ($user->uid) {
+    $account = user_load($user->uid);
+    $homepage = fr_user_get_homepage($account);
+    menu_set_active_item($homepage);
+  }
+  else {
+    menu_set_active_item('user');
+  }
+  return menu_execute_active_handler(NULL, FALSE);
+}
+
+/**
+ * Implements hook_views_default_views_alter().
+ */
+function fr_user_views_default_views_alter(&$views) {
+  // Disable default admin view to manage content.
+  if (isset($views['admin_views_node'])) {
+    $views['admin_views_node']->disabled = TRUE;
+  }
+  // Disable default admin view to manage users.
+  if (isset($views['admin_views_user'])) {
+    $views['admin_views_user']->disabled = TRUE;
+  }
+}
+
+/**
+ * Implements hook_user_login().
+ */
+function fr_user_user_login(&$edit, $account) {
+  $edit['redirect'] = '<front>';
+}
+
+/**
+ * Get homepage URL for a user.
+ */
+function fr_user_get_homepage($account) {
+  // Get array of groups that user is assigned to.
+  $user_group_id = field_get_items('user', $account, 'og_user_node');
+
+  // If there user is assigned to more then one group.
+  if (count($user_group_id) > 1) {
+    // Get group priority field.
+    $group_priority = field_get_items('user', $account, 'field_group_priority');
+
+    if (isset($group_priority['0']['target_id'])) {
+      $group_priority = $group_priority['0']['target_id'];
+      // Get the node of the group is associated with.
+      $node = node_load($group_priority);
+      // Load default dashboard id.
+      if ($default_dashboard = field_get_items('node', $node, 'field_default_dashboard')) {
+        if ($dashboard_nid = $default_dashboard[0]['target_id']) {
+          // Redirect user to default dashboard node.
+          return "node/$dashboard_nid";
+        }
+      }
+    }
+  }
+  // If user is assigned to only one group.
+  elseif (count($user_group_id) == 1) {
+    $user_group_id = $user_group_id['0']['target_id'];
+    // Get the node of the group is associated with.
+    if ($node = node_load($user_group_id)) {
+      // Load default dashboard id.
+      $default_dashboard = field_get_items('node', $node, 'field_default_dashboard');
+      if ($dashboard_nid = $default_dashboard[0]['target_id']) {
+        // Redirect user to default dashboard node.
+        return "node/$dashboard_nid";
+      }
+    }
+  }
+  return 'user';
+}
+
+/**
+ * Helper function to check if user is remote (LDAP).
+ *
+ * @param $account
+ *
+ * @return bool
+ */
+function fr_user_is_remote($account = NULL) {
+  if ($account == NULL) {
+    global $user;
+    $account = $user;
+  }
+  return !empty($account->data['remote']);
+}
+
+/**
+ * Helper function to user's LDAP username.
+ *
+ * @param $account
+ *
+ * @return string
+ */
+function fr_user_get_username($account = NULL) {
+  if ($account == NULL) {
+    global $user;
+    $account = $user;
+  }
+  return $account->data['service_user']['username'];
+}
+
+/**
+ * Helper function to user's LDAP display name.
+ *
+ * @param $account
+ *
+ * @return string
+ */
+function fr_user_get_display_name($account = NULL) {
+  if ($account == NULL) {
+    global $user;
+    $account = $user;
+  }
+  return $account->data['service_user']['displayName'];
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ * Add site_welcome_message field in configuration page
+ */
+function fr_user_form_system_site_information_settings_alter(&$form, &$form_state, $form_id) {
+  //welcome message form item
+  $form['site_information']['site_welcome_message'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Welcome message'),
+    '#default_value' => variable_get('site_welcome_message'),
+  );
+
+  //terms and conditions form item
+  $form['site_information']['terms_and_conditions'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Terms and conditions'),
+    '#description' => t('This text will appear at login page. User must accept those terms and conditions to be logged in.'),
+    '#default_value' => variable_get('terms_and_conditions'),
+  );
+  return $form;
+}

@@ -1,0 +1,341 @@
+<?php
+
+/**
+ * Implements hook_init().
+ */
+function fr_case_init() {
+  drupal_add_js(array('arg' => arg()), 'setting');
+
+  // Without this line error messages for fr_case_search won't be displayed.
+  // It's probably because drupal_get_form() is executed too late in hook_navbar().
+  drupal_get_form('fr_case_search');
+}
+
+/**
+ * Implements hook_menu().
+ */
+function fr_case_menu() {
+  $items = array();
+
+  // Case.
+  $items['cases/%fr_case'] = array(
+    'title callback' => 'fr_case_page_title',
+    'title arguments' => array(1),
+    'page callback' => 'fr_case_page_view',
+    'page arguments' => array(1),
+    'access arguments' => array('access content'),
+    'file' => 'fr_case.pages.inc',
+  );
+
+  // Scene.
+  $items['cases/%fr_case/scenes/%fr_case_scene_wildcard'] = array(
+    'title callback' => 'fr_case_scene_page_title',
+    'title arguments' => array(1, 3),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('fr_case_scene_page_form', 1, 3),
+    'load arguments' => array('%map'),
+    'access arguments' => array('access content'),
+    'file' => 'fr_case.pages.inc',
+  );
+  $items['cases/%fr_case/scenes/%fr_case_scene_wildcard/view'] = array(
+    'title' => 'Scene information',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -1,
+  );
+
+  // Ajax callback for Exif data.
+  $items['scene-image-data/%'] = array(
+    'page callback' => 'fr_case_scene_image_data',
+    'page arguments' => array(1),
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+    'delivery callback' => 'fr_content_delivery_callback',
+    'file' => 'fr_case.pages.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function fr_case_permission() {
+  return array(
+    'view scene restricted images' =>  array(
+      'title' => t('View restricted images from scene'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_theme().
+ */
+function fr_case_theme($existing, $type, $theme, $path) {
+  $templates_path = drupal_get_path('module', 'fr_case') . '/templates';
+  return array(
+    'fr_case' => array(
+      'variables' => array('case' => array(), 'case_info' => array(), 'scenes' => array()),
+      'template' => 'fr-case',
+      'path' => $templates_path,
+    ),
+    'fr_case_scene_dockets' => array(
+      'variables' => array('case' => array(), 'scene' => array(), 'dockets' => array(), 'total_images' => array(), 'video' => NULL, 'print_links' => array(), 'is_remote' => NULL),
+      'template' => 'fr-case-scene-dockets',
+      'path' => $templates_path,
+    ),
+  );
+}
+
+/**
+ * Loads a case form the service.
+ */
+function fr_case_load($case_id, $reset = FALSE) {
+  // Don't load multiple times the same case during one page request.
+  if (!$reset && $case = &drupal_static(__FUNCTION__, array())) {
+    return $case;
+  }
+  try {
+    $client = new CaseServiceClient();
+    $data = $client->getCaseById($case_id);
+    if (isset($data['casedetails'][0])) {
+      $case = $data['casedetails'][0];
+      return $case;
+    }
+    else {
+      return NULL;
+    }
+  }
+  catch (Exception $e) {
+    watchdog_exception('fr_case', $e);
+    return $e->getMessage();
+  }
+}
+
+/**
+ * Loads a scene.
+ */
+function fr_case_scene_load($case, $scene_id) {
+  if (isset($case['scenes'][$scene_id])) {
+    return $case['scenes'][$scene_id];
+  }
+  else {
+    return NULL;
+  }
+}
+
+/**
+ * Helper function to load a scene as menu wildcard.
+ */
+function fr_case_scene_wildcard_load($scene_id, $menu_args) {
+  $case = NULL;
+  if (isset($menu_args[1])) {
+    $case = $menu_args[1];
+  }
+  return fr_case_scene_load($case, $scene_id);
+}
+
+/**
+ * Helper function to display conditional video tag for IE8
+ *
+ * @return string Video tag
+ */
+function fr_case_video() {
+  $isIE8  = (bool)preg_match('/msie 8./i', $_SERVER['HTTP_USER_AGENT']);
+  if ($isIE8) {
+    $variables = array(
+      'element' => array(
+        '#tag' => 'video',
+        '#attributes' => array(
+          'id' => 'video',
+          'width' => '800',
+          'height' => '400',
+          'src' => '',
+        ),
+      ),
+    );
+  } else {
+    $variables = array(
+      'element' => array(
+        '#tag' => 'video',
+        '#attributes' => array(
+          'id' => 'video',
+          'style' => 'width:100%; height:100%;',
+          'width' => '100%',
+          'height' => '100%',
+        ),
+      ),
+    );
+  }
+  $output = theme('html_tag', $variables);
+  return $output;
+}
+
+/**
+ * Helper function to get category CSS class.
+ *
+ * @param $category_id
+ * @return null
+ */
+function fr_case_scene_image_get_category_class($category_id) {
+  $mapping = array(
+    1 => 'scene-image', // Scene Image / No icon
+    2 => 'fingerprint', // Fingerprint / Fingerprint icon
+    3 => 'footwear', // Footwear icon
+    4 => 'discard', // Discard / No icon (you will never get this at the moment, as the API will not return discarded images)
+    5 => 'mcl', // MCL icon (major crime lab)
+  );
+  if (isset($mapping[$category_id])) {
+    return $mapping[$category_id];
+  }
+  else {
+    return NULL;
+  }
+}
+
+/**
+ * Ajax callback for scene dockets display.
+ */
+function fr_case_scene_dockets_display_ajax_callback($form, &$form_state) {
+  return $form['display_dockets'];
+}
+
+/**
+ * Ajax callback for scene switch dropdown.
+ */
+function fr_case_scene_switch_ajax_callback($form, &$form_state) {
+  $commands = array();
+  ctools_include('ajax');
+  $commands[] = ctools_ajax_command_redirect($form_state['values']['switch_scene']);
+  return array('#type' => 'ajax', '#commands' => $commands);
+}
+
+/**
+ * Implements hook_navbar().
+ */
+function fr_case_navbar() {
+  $form = drupal_get_form('fr_case_search');
+  $items['case_search'] = array(
+    '#type' => 'navbar_item',
+    'tab' => $form,
+    '#weight' => 999,
+    '#wrapper_attributes' => array('class' => array('navbar-tab--case-search', 'navbar-tab--right')),
+  );
+  return $items;
+}
+
+/**
+ * Case search form.
+ */
+function fr_case_search($form, &$form_state) {
+  $form['#attributes']['id'] = 'fr-case-search';
+  $form['ref_number'] = array(
+    '#type' => 'textfield',
+    '#title_display' => 'invisible',
+    '#title' => t('Ref. number'),
+    '#size' => 18,
+    '#required' => TRUE,
+    '#attributes' => array(
+      'placeholder' => t('Enter ref. number'),
+    ),
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Go to case'),
+  );
+  return $form;
+}
+
+/**
+ * Validation for the case search form.
+ */
+function fr_case_search_validate($form, &$form_state) {
+  try {
+    // Get id of case by reference number.
+    $client = new DataSetServiceClient();
+    if ($case_id = $client->getCaseIdByRefNumber($form_state['values']['ref_number'])) {
+      $form_state['redirect'] = "cases/$case_id";
+    }
+    else {
+      $form_state['redirect'] = current_path();
+      form_set_error('ref_number', t("Case with this reference number don't exists."));
+    }
+  }
+  catch (Exception $e) {
+    form_set_error('', t('Unknown error occurred. Please contact administrator.'));
+    watchdog_exception('fr_case', $e);
+  }
+}
+
+/**
+ * Implements hook_library().
+ */
+function fr_case_library() {
+  //Lazy load
+  $path = drupal_get_path('module', 'fr_case');
+
+  $library['jquery_lazyload'] = array(
+    'title' => t('Lazy Load'),
+    'website' => 'http://www.appelsiini.net/projects/lazyload',
+    'version' => '1.9.3',
+    'js' => array(
+      array('data' => libraries_get_path('jquery_lazyload') . '/jquery.lazyload.min.js', 'type' => 'file', 'weight' => -10),
+    ),
+  );
+
+  $library['jquery_lazyload_integration'] = array(
+    'title' => t('Lazy Load integration'),
+    'version' => '1.0',
+    'js' => array(
+      array('data' => "$path/js/lazy_load.js", 'weight' => 1, 'type' => 'file'),
+    ),
+    'dependencies' => array(
+      array('fr_case', 'jquery_lazyload'),
+    ),
+  );
+
+  //Photo Swipe
+  $library_path = libraries_get_path('photoswipe');
+
+  $library['photoswipe_library'] = array(
+    'title' => 'PhotoSwipe library',
+    'version' => '4.0.7',
+    'js' => array(
+      array('data' => "$library_path/dist/photoswipe.min.js", 'weight' => -10, 'type' => 'file'),
+      array('data' => "$library_path/dist/photoswipe-ui-default.min.js", 'weight' => -10, 'type' => 'file'),
+    ),
+    'css' => array(
+      array('data' => "$library_path/dist/photoswipe.css"),
+      array('data' => "$library_path/dist/default-skin/default-skin.css"),
+    ),
+  );
+
+  $library['photoswipe'] = array(
+    'title' => 'Fish PhotoSwipe',
+    'version' => '1.0',
+    'js' => array(
+      array('data' => "$path/js/photoswipe.js", 'weight' => 1, 'type' => 'file'),
+    ),
+    'dependencies' => array(
+      array('fr_case', 'photoswipe_library'),
+    ),
+  );
+
+  // Tooltip
+  $library['tooltip'] = array(
+    'title' => 'Fish Tooltip',
+    'version' => '1.0',
+    'js' => array(
+      array('data' => "$path/js/tooltip.js", 'weight' => 1, 'type' => 'file'),
+    ),
+  );
+
+  //Media element settings
+  $library['mediaelement_settings'] = array(
+    'title' => 'Media Element Settings',
+    'version' => '1.0',
+    'js' => array(
+      array('data' => drupal_get_path('module', 'mediaelement') . '/mediaelement.js', 'weight' => 1, 'type' => 'file'),
+    ),
+  );
+  return $library;
+}

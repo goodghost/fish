@@ -1,0 +1,8 @@
+<?php
+
+/**
+ * Implements hook_install().
+ */
+function fr_content_group_install() {
+  node_access_rebuild();
+}

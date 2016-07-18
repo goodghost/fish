@@ -1,0 +1,5 @@
+name,pass,mail,role_names
+administrator,administrator,administrator@mailinator.com,administrator
+builder,builder,builder@mailinator.com,builder
+auth,auth,auth@mailinator.com,authenticated
+manager,manager,manager@mailinator.com,manager

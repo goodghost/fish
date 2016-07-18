@@ -1,0 +1,1683 @@
+<?php
+/**
+ * @file
+ * Code for the FR Form feature.
+ */
+
+include_once 'fr_form.features.inc';
+
+/**
+ * @file
+ * Fish webform module file. Provides Webform to FISH data integration.
+ */
+
+module_load_include('inc', 'webform', 'components/select');
+
+/**
+ * Implements hook_menu().
+ */
+function fr_form_menu() {
+  $items['submission/%/%/%'] = array(
+    'title' => 'View submission',
+    'title callback' => 'fr_form_view_submission_page_title',
+    'title arguments' => array(2),
+    'page arguments' => array(1, 2, 3),
+    'page callback' => 'fr_form_node_object_id',
+    'access arguments' => array(1),
+    'type' => MENU_NORMAL_ITEM,
+    'access callback' => 'fr_form_fish_view_node_access',
+    'weight' => 100,
+  );
+
+  $items['submission/%/%/%/view'] = array(
+    'title' => 'View submission',
+    'title callback' => 'fr_form_view_submission_page_title',
+    'title arguments' => array(2),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+
+  $items['submission/%/%/%/edit'] = array(
+    'title' => 'Edit submission',
+    'page arguments' => array(1, 2, 3, 4),
+    'page callback' => 'fr_form_node_object_id',
+    'title callback' => 'fr_form_edit_submission_page_title',
+    'title arguments' => array(2),
+    'access arguments' => array(1),
+    'access callback' => 'fr_form_fish_edit_node_access',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 100,
+  );
+
+  $items['node/%/object/%'] = array(
+    'title' => 'New submission',
+    'page arguments' => array(1, 3),
+    'page callback' => 'fr_form_submit_new_entry',
+    'type' => MENU_NORMAL_ITEM,
+    'access arguments' => array(1),
+    'access callback' => 'fr_form_fish_add_node_access',
+    'weight' => 100,
+  );
+
+  return $items;
+}
+
+
+function fr_form_submit_new_entry($nid, $object) {
+ $node = node_load($nid);
+ if ($node->type == 'webform' && isset($node->fr_form_category_objects)) {
+    $output = '';
+    $node->submission_add['object_id'] = $object;
+    node_build_content($node);
+    $output = render($node->content);
+    return $output;
+  } else {
+    return drupal_not_found();
+  }
+}
+
+/**
+ * Implements hook_webform_component_info().
+ */
+function fr_form_webform_component_info() {
+  $component_info = array(
+    'datetime' => array(
+      'label' => t('Datetime'),
+      'description' => t('Presents month, day, year and time fields.'),
+      'features' => array(
+        'views_range' => TRUE,
+        'css_classes' => FALSE,
+      ),
+      'file' => 'components/datetime.inc',
+      'conditional_type' => 'date',
+    ),
+  );
+
+  return $component_info;
+}
+
+/** 
+ * Helper function to get available operations
+ * Returns array of operations or FALSE
+ */
+function fr_form_available_operations($nid) {
+  $node = node_load($nid);
+  $operations = unserialize($node->fr_form_operations);
+  return $operations;
+}
+
+/**
+ * Access callback function to view node
+ */
+function fr_form_fish_view_node_access($nid) {
+  $available_operations = fr_form_available_operations($nid);
+  if (in_array('1', $available_operations)) {
+    return TRUE;
+  }
+  return FALSE;
+}
+
+/**
+ * Access callback function to edit node
+ */
+function fr_form_fish_edit_node_access($nid) {
+  $available_operations = fr_form_available_operations($nid);
+  if (in_array('0', $available_operations)) {
+    return TRUE;
+  }
+  return FALSE;
+}
+
+/**
+ * Access callback function to add node
+ */
+function fr_form_fish_add_node_access($nid) {
+  $available_operations = fr_form_available_operations($nid);
+  if (in_array('2', $available_operations)) {
+    return TRUE;
+  }
+  return FALSE;
+}
+
+/**
+ * Implements hook_menu_alter.
+ */
+function fr_form_menu_alter(&$items) {
+  $items['node/%webform_menu/webform/components/%webform_menu_component/delete']['access callback'] = 'fr_form_requierd_item_access';
+  $items['node/%webform_menu/webform/components/%webform_menu_component/delete']['access arguments'] = array('update', 1, 4, 5);
+
+  $items['node/%webform_menu/webform-results']['access callback'] = 'fr_webform_results_access';
+  $items['node/%webform_menu/webform-results']['access arguments'] = array(1, 2);
+}
+
+function fr_webform_results_access($node, $status) {
+  if ($status == 'webform-results') {
+    if (isset($node->fr_form_object) && !empty($node->fr_form_object)) {
+      drupal_set_message(t('This webform is associated with Fish API, so any results are saved. Go back to the !form.', array('!form' => l(t('form'), 'node/'.$node->nid))));
+      return FALSE;
+    }
+  }
+  return 'webform_results_access';
+}
+
+/**
+ * Access callback function for component delete. It checks if field is required and returns FALSE or TRUE.
+ */
+function fr_form_requierd_item_access($status, $node, $component, $delete) {
+  if ($delete == 'delete' && isset($node->fr_form_object)) {
+    $required_status = fr_form_get_field_required_status($node->fr_form_category_objects, $component['form_key']);
+    if ($required_status) {
+      drupal_set_message(t('This is required field and cannot be deleted. !url to the field list.', array('!url' => l(t('Go back'), 'node/'.$node->nid.'/webform/components'))), 'error');
+      return FALSE;
+    } else {
+      return TRUE;
+    }
+  } else {
+    return 'node_access';
+  }
+}
+
+/**
+ * Callback function for view submission page title
+ */
+function fr_form_view_submission_page_title($id) {
+  return t('View submission ID: @id', array('@id' => $id));
+}
+
+/**
+ * Callback function for view submission page title
+ */
+function fr_form_edit_submission_page_title($id) {
+  return t('Edit submission ID: @id', array('@id' => $id));
+}
+
+/**
+ * Renders webform node and prepares a form for submission new data
+ */
+function fr_form_node_object_id($nid, $id = NULL, $dataset_id, $edit = NULL) {
+  $node = node_load($nid);
+  if ($node->type == 'webform' && isset($node->fr_form_category_objects)) {
+    $output = '';
+    $node->submission_edit['object_id'] = (isset($id) && ctype_digit($id)) ? $id : NULL;
+    $node->submission_edit['state'] = (isset($edit) && $edit == 'edit') ? 'edit' : NULL;
+    $node->submission_edit['dataset_id'] = (isset($dataset_id)) ? $dataset_id : NULL;
+    node_build_content($node);
+    $output = render($node->content);
+    return $output;
+  } else {
+    return drupal_not_found();
+  }
+}
+
+function fr_form_get_object_field_value($object, $field_key = NULL) {
+  $fields = fr_form_get_fields($object);
+}
+
+/**
+ * Helper function to get field required status.
+ * Returns TRUE if the field is required or FALSE if it's not.
+ */
+function fr_form_get_field_required_status($category, $object = NULL, $id) {
+  $required = FALSE;
+  $fields = fr_form_get_fields($category, $object);
+  $fields = $fields['fields'];
+  foreach ($fields as $key => $value) {
+    if ($value['name'] == $id) {
+      if (!empty($value['availability'])) {
+        $availability = explode(',', $value['availability']);
+        if (in_array('required', $availability)) {
+          $required = TRUE;
+        }
+      } 
+    }
+  }
+  return $required;
+}
+
+/**
+ * Helper function to get field max length.
+ * Returns number of max length or FALSE.
+ */
+function fr_form_get_field_max_length($category, $object = NULL, $id) {
+  $max_length = FALSE;
+  $fields = fr_form_get_fields($category, $object);
+  $fields = $fields['fields'];
+  foreach ($fields as $key => $value) {
+    if ($value['name'] == $id) {
+      $max_length = isset($value['length']) ? $value['length'] : FALSE;
+    }
+  }
+  return $max_length;
+}
+
+/**
+ * Helper function to get required fields from object.
+ * Returns array of fields.
+ */
+function fr_form_get_required_fields($category, $object = NULL) {
+  $fields = fr_form_get_fields($category, $object);
+  if (!empty($fields['fields'])) {
+    $fields = $fields['fields'];
+    $required_fields = array();
+    foreach ($fields as $key => $value) {
+      if (isset($value['values']) && !empty($value['values'])) {
+        $type = fr_form_get_webform_type($value['type'], TRUE);
+      } else {
+        $type = fr_form_get_webform_type($value['type'], FALSE);
+      }
+      if (isset($value['availability']) && !empty($value['availability'])) {
+        $availability = explode(',', $value['availability']);
+        if (in_array('required', $availability)) {
+          $required_fields[] = array(
+            'name' => $value['name'],
+            'form_key' => $value['name'],
+            'required' => 1,
+            'weight' => 0,
+            'type' => $type,
+            'extra' => array(
+              'maxlength' => ($type == 'textfield' && isset($value['length'])) ? $value['length'] : '',
+              'max' => ($type == 'number' && isset($value['length'])) ? $value['length'] : '',
+            ),
+          );
+        }
+      }
+    }
+    return $required_fields;
+  }
+  return FALSE;
+}
+
+/**
+ * Helper function to get array of webform types and associated FISH types.
+ * Returns array of types.
+ */
+function fr_form_get_types() {
+  $types = array(
+    'varchar' => 'textfield',
+    'char' => 'textfield',
+    'int' => 'number',
+    'double' => 'number',
+    'binary' => 'number',
+    'datetime' => 'datetime',
+    'longtext' => 'textarea',
+    'blob' => 'textarea',
+    'mediumblob' => 'textarea',
+    'longblob' => 'textarea',
+    'timestamp' => 'datetime',
+    'tinyint' => 'number',
+    'bigint' => 'number',
+    'decimal' => 'number',
+    'float' => 'number',
+    'text' => 'textfield',
+    'mediumtext' => 'textfield',
+    'date' => 'date',
+    'time' => 'time',
+  );
+  return $types;
+}
+
+/**
+ * Helper function that returns field type from FISH type.
+ */
+function fr_form_get_webform_type($field_type, $has_options = FALSE) {
+  $types = fr_form_get_types();
+  if ($has_options === TRUE) {
+    $type = 'select';
+  } else {
+    if (isset($types[$field_type])) {
+      $type = $types[$field_type];
+    } else {
+      $type = 'textfield';
+    }
+  }
+  return $type;
+}
+
+/**
+* Helper function to get primary key
+* Returns name of field or FALSE
+*/
+function fr_form_get_primary_key($fields) {
+  $primary = FALSE;
+  if (isset($fields)) {
+    foreach ($fields as $key => $value) {
+      if (isset($value['availability'])) {
+        if (strpos($value['availability'], 'primary') !== FALSE) {
+          $primary = $value['name'];
+        }
+      }
+    }
+  }
+  return $primary;
+}
+
+/**
+ * Helper function that returns array of options (fields that can be used with particular webform type) 
+ * that correspondes to FISH field type excluding id.
+ */
+function fr_form_match_types($fields, $type) {
+  $options = array();
+  $types = fr_form_get_types();
+  $primary = fr_form_get_primary_key($fields);
+  if ($type == 'select') {
+    foreach ($fields as $key => $value) {
+      if (isset($value['values']) && !empty($value['values'])) {
+          if ($value['name'] != $primary) {
+            $options[$value['name']] = $value['name'];
+          }
+      }
+    }
+  } else {
+    foreach ($fields as $key => $value) {
+      if (!isset($types[$value['type']])) {
+        $types[$value['type']] = 'textfield';
+      }
+      if ($types[$value['type']] === $type) {
+        if ($value['name'] != $primary) {
+          $options[$value['name']] = $value['name'];
+        }
+      }
+
+    }
+  }
+  return $options;
+}
+
+/**
+ * Helper function that creates options for select field 
+ */
+function fr_form_get_select_values($category, $object = NULL, $field) {
+  $pairs = FALSE;
+  $fields = fr_form_get_fields($category, $object);
+  if (isset($fields['fields'])) {
+    $fields = $fields['fields'];
+    foreach ($fields as $key => $value) {
+      if ($value['name'] == $field) {
+        if (isset($value['values']) && is_array($value['values'])) {
+          foreach($value['values'] as $option_key => $option_value) {
+            if ($option_value === end($value['values'])) {
+              $pairs .= $option_value['value'].'|'.$option_value['text'];
+            } else {
+              $pairs .= $option_value['value'].'|'.$option_value['text']."\n";  
+            }
+          }
+        }
+      }
+    }
+  }
+  return $pairs;
+}
+
+/**
+ * Recursive function - searches for element_key in element and assign it as value
+ * @param
+ * $element - valid drupal form element array
+ * $element_key - searched element
+ * $value - value to return
+ */
+function fr_form_recursive_get_value(&$element, $element_key, &$value) {
+  $children = element_children($element);
+  foreach ($children as $key) {
+    $child = &$element[$key];
+    if (is_array($child)) {
+      fr_form_recursive_get_value($child, $element_key, $value);
+    } else if ($element_key == $key) {
+      $value = $child;
+    }
+  }
+}
+
+/** 
+ * Recursive function - searches for element_key in element and add attachment (array)
+ * $element - valid drupal form element array
+ * $element_key - searched element
+ * $attachment - array
+ */
+function fr_form_recursive_attach(&$element, $element_key, $attachment) {
+  $children = element_children($element);
+  foreach ($children as $key) {
+    $child = &$element[$key];
+    if (is_array($child)) {
+      if ($key == $element_key) {
+        $child = array_merge($child, $attachment);
+      }
+      fr_form_recursive_attach($child, $element_key, $attachment);
+    }
+  }
+}
+
+/**
+ * Recursive function to update default value AND/OR diabled of form elements.
+ */
+function fr_form_update_recursive_children(&$element, &$item, $disabled) {
+  $children = element_children($element);
+
+  foreach ($children as $key) {
+    $child = &$element[$key];
+    if (is_array($child)) {
+      if (isset($child['#default_value']) || isset($child['#options'])) {
+        $element[$key]['#default_value'] = (isset($item[$key])) ? $item[$key] : '';
+        if ($disabled) {
+          $element[$key]['#disabled'] = TRUE;
+        }
+      }
+      fr_form_update_recursive_children($child, $item, $disabled);
+    }
+  }
+}
+
+/**
+ * Returns an array of fields structure of provided type
+ * @param
+ * $object_id - id of the fish object
+ * $field_type - default datetime
+*/
+function fr_form_get_field_structure($category, $object = NULL, $field_type = 'datetime') {
+  $fields_of_type = array();
+  $fields = fr_form_get_fields($category, $object);
+  if (isset($fields['fields'])) {
+    $fields = $fields['fields'];
+    foreach ($fields as $key => $value) {
+      if ($value['type'] === $field_type) {
+        $fields_of_type[] = $value;
+      }
+    }  
+  }
+  return $fields_of_type;
+}
+
+/**
+ * Get unique field name. Returns name of field or FALSE
+ * @param
+ * $category_name - internal name of category
+*/
+function fr_form_get_unique_field_name($category_name, $object = NULL) {
+  $unique = FALSE;
+  $category_fields = fr_form_get_fields($category_name, $object);
+  if (is_array($category_fields)) {
+    $category_fields = $category_fields['fields'];
+    foreach ($category_fields as $key => $value) {
+      if (strpos($value['availability'], 'unique') !== FALSE) {
+        $unique = $value['name'];
+      }
+    }
+  }
+  return $unique;
+}
+
+/**
+ * Ajax callback function for unique field
+ */
+function fr_form_unique_field_callback($form, &$form_state) {
+  return $form['submitted'];
+}
+
+/**
+ * Implements hook_module_implements_alter.
+ */
+function fr_form_module_implements_alter(&$implementations, $hook) {
+  if ($hook == 'form_alter') {
+    $group = $implementations ['fr_form'];
+    unset($implementations ['fr_form']);
+    $implementations ['fr_form'] = $group;
+  }
+}
+
+/* Returns options for operations */
+function fr_form_available_operations_options() {
+  return array(t('Edit'), t('View'), t('Add'));
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function fr_form_form_alter(&$form, &$form_state, $form_id) {
+  // Webform client form alter - display data from API
+  if (isset($form['#node']) && $form['#node']->type == 'webform' && !empty($form['#node']->fr_form_object) && !empty($form['#node']->submission_edit['object_id']) && ctype_digit($form['#node']->submission_edit['object_id']) && !isset($form['#node']->submission_edit['state']) && isset($form['#node']->submission_edit['dataset_id']) && !empty($form['#node']->submission_edit['dataset_id'])) {
+
+    if ($form_id == 'webform_client_form_'.$form['#node']->nid) {
+      // Add custom class for forms integrated with FISH, so we can remove borders
+      $form['#attributes']['class'][] = 'webform-fish-api view-page';
+      // Unset actions so the user can't submit a form
+      unset($form['actions']);
+
+      // Generate custom submit button
+      $form = fr_from_generate_srq_submit_buttons($form);
+
+      $item = fr_form_get_data_item($form['#node']->submission_edit['dataset_id'], $form['#node']->submission_edit['object_id']);
+      $item = $item['result'];
+      
+      $object = fr_form_transform_object_into_string($form['#node']->fr_form_category_objects, $form['#node']->fr_form_object);
+
+      // Get all fields of datetime type
+      $date_fields = fr_form_get_field_structure($form['#node']->fr_form_category_objects, $object, 'datetime');
+
+      // Format date to desired format
+      foreach ($date_fields as $key => $value) {
+        if (!empty($item[$value['name']])) {
+          $item[$value['name']] = strtotime($item[$value['name']]);
+          $item[$value['name']] = format_date($item[$value['name']], 'short');
+        }
+      }
+      fr_form_update_recursive_children($form['submitted'], $item, TRUE);
+    }
+  }
+
+  // Webform client form alter - edit data from API
+  if (isset($form['#node']) && $form['#node']->type == 'webform' && !empty($form['#node']->fr_form_object) && !empty($form['#node']->submission_edit['object_id']) && ctype_digit($form['#node']->submission_edit['object_id']) && !empty($form['#node']->submission_edit['state']) && $form['#node']->submission_edit['state'] == 'edit' && isset($form['#node']->submission_edit['dataset_id']) && !empty($form['#node']->submission_edit['dataset_id'])) {
+    if ($form_id == 'webform_client_form_'.$form['#node']->nid) {
+
+      $form['#attributes']['class'][] = 'webform-fish-api';
+      $form['#attributes']['class'][] = 'webform-fish-api-edit-item';
+      $form['#attached']['js'] = array(
+        drupal_get_path('module', 'fr_form'). '/js/fr_form.js',
+      );
+
+      $new_submission = t('New submission');
+      $edit_submission = t('Edit submission');
+
+      drupal_add_js(array('fr_form' => array('fr_form_title_new_submission' => $new_submission, 'fr_form_title_edit_submission' => $edit_submission)), 'setting');
+
+      //Redirect user after form submit
+      $form['#node']->webform['redirect_url'] = 'submission/'.$form['#node']->nid.'/'.$form['#node']->submission_edit['object_id'].'/'.$form['#node']->submission_edit['dataset_id'].'/edit';
+
+      // Confirmation text
+      $form['#node']->webform['confirmation'] = t('Your submission has been saved.');
+
+      $item = fr_form_get_data_item($form['#node']->submission_edit['dataset_id'], $form['#node']->submission_edit['object_id']);
+      $item = $item['result'];
+
+      $object = fr_form_transform_object_into_string($form['#node']->fr_form_category_objects, $form['#node']->fr_form_object);
+
+      // Get all fields of datetime type
+      $date_fields = fr_form_get_field_structure($form['#node']->fr_form_category_objects, $object, 'datetime');
+
+      // Format date to desired format
+      foreach ($date_fields as $key => $value) {
+        if (!empty($item[$value['name']])) {
+          $item[$value['name']] = strtotime($item[$value['name']]);
+          $item[$value['name']] = format_date($item[$value['name']], 'short');
+        }
+      }
+      fr_form_update_recursive_children($form['submitted'], $item, FALSE);
+    }
+  }
+
+  // Add entry by filling up webform
+  if (isset($form['#node']) && $form['#node']->type == 'webform' && !empty($form['#node']->fr_form_object) && !isset($form['#node']->submission_edit)) {
+    if ($form_id == 'webform_client_form_'.$form['#node']->nid) {
+      $form['#attributes']['class'][] = 'webform-fish-api';
+      $form['#attached']['js'] = array(
+        drupal_get_path('module', 'fr_form'). '/js/fr_form.js',
+      );
+
+      // If object_id exists add part of url at the end to redirect user to the same node add object
+      $part_url = '';
+      if (!empty($form['#node']->submission_add['object_id'])) {
+        $part_url = '/object/'.$form['#node']->submission_add['object_id'];
+        $form['#attributes']['class'][] = 'webform-fish-api-add-new-item';
+      }
+
+      // Hide submit button completly if in node/% mode
+      if (!isset($form['#node']->submission_add)) {
+        $form['actions']['submit']['#access'] = FALSE;
+      }
+
+      //Redirect user after form submit
+      $form['#node']->webform['redirect_url'] = 'node/'.$form['#node']->nid.$part_url;
+
+      // Confirmation text
+      $form['#node']->webform['confirmation'] = t('Your submission has been added.');
+      
+      $object = fr_form_transform_object_into_string($form['#node']->fr_form_category_objects, $form['#node']->fr_form_object);
+      // Get unique value
+      $unique = fr_form_get_unique_field_name($form['#node']->fr_form_category_objects, $object);
+
+      $new_submission = variable_get('fr_form_title_new_submission', 'New submission');
+      $edit_submission = variable_get('fr_form_title_edit_submission', 'Edit submission');
+
+      drupal_add_js(array('fr_form' => array('fr_form_title_new_submission' => $new_submission, 'fr_form_title_edit_submission' => $edit_submission)), 'setting');
+
+      if (!empty($unique) && isset($form['#node']->submission_add)) {
+
+        $form['submitted']['actions']['submit'] = $form['actions']['submit'];
+        $form['submitted']['actions']['#weight'] = 100;
+        unset($form['actions']['submit']);
+
+        // Disable submit button by default
+        $form['submitted']['actions']['submit']['#disabled'] = TRUE;
+
+        // Add wrapper around submitted element
+        $form['submitted']['#prefix'] = '<div id="fish-webform">';
+        $form['submitted']['#suffix'] = '</div>';
+
+        fr_form_recursive_attach($form['submitted'], $unique, array(
+          '#ajax' => array(
+            'event' => 'blur',
+            'callback' => 'fr_form_unique_field_callback',
+            'wrapper' => 'fish-webform',
+            'effect' => 'fade',
+            'keypress' => TRUE,
+            'progress' => array(
+              'type' => 'throbber',
+              'message' => t('Searching for matching entries...'),
+            ),
+          )
+        ));
+
+        // If there's any data provided by ajax
+        if (isset($form_state['values'])) {
+          // Enable default submit action
+          $form['submitted']['actions']['submit']['#disabled'] = FALSE;
+
+          $value = NULL;
+          fr_form_recursive_get_value($form_state['values'], $unique, $value);
+
+          if (!empty($value)) {
+            // Try to get unique value
+            $client = new DataSetServiceClient();
+            $client->setFilters(array(
+              array('operator' => '=', 'field' => $unique, 'value' => $value)
+            ));
+            $data_item = $client->getData($form['#node']->submission_add['object_id']);
+          }
+          
+          // If unique value exists
+          if (isset($data_item['result'][0]) && is_array($data_item['result'][0])) {
+
+            // Set message that informs a user about existing record.
+            drupal_set_message(t('The entry with provided value of @unique already exists in the system. The existing record will be updated.', array('@unique' => $unique)));
+
+            // Disable and hide default submit button
+            $form['submitted']['actions']['submit']['#disabled'] = TRUE;
+            $form['submitted']['actions']['submit']['#access'] = FALSE;
+
+            // Fill up all form elements with data provided by unique value
+            foreach($data_item['result'][0] as $key => $value) {
+              fr_form_recursive_attach($form['submitted'], $key, array('#attributes' => array('data-value' => $value)));
+            }
+
+            // Gather other data which is required to update an entry
+            // Object id - for example: 26
+            $form['submitted']['object_id'] = array(
+              '#type' => 'value',
+              '#value' => $data_item['result'][0]['id'],
+            );
+
+            // State - for example: edit
+            $form['submitted']['state'] = array(
+              '#type' => 'value',
+              '#value' => 'edit',
+            );
+
+            // dataset_id - for example: config.asset_types
+            $form['submitted']['dataset_id'] = array(
+              '#type' => 'value',
+              '#value' => $form['#node']->submission_add['object_id'],
+            );
+
+            // Create update button to run fr_form_submit_update_existing_item submit function
+            $form['submitted']['update'] = array(
+              '#type' => 'submit',
+              '#value' => t('Update'),
+              '#weight' => 100,
+              '#submit' => array('fr_form_submit_update_existing_item'),
+            );
+          }
+        }
+      }
+    }
+  }
+
+  $webform_ids = array(
+    'webform_node_form',
+    'webform_component_edit_form',
+    'webform_components_form',
+  );
+
+  if (in_array($form_id, $webform_ids)) {
+    $node = $form['#node'];
+  }
+
+  switch ($form_id) {
+    case 'webform_node_form':
+      if ($allowed_objects = fr_form_get_objects_options()) {
+        // Creates additional submit function to redirect user to node/%/edit or node/%
+        // depending on fr_form_operations value.
+        $form['actions']['submit']['#submit'][] = 'fr_form_fish_form_submit';
+
+        // Array of category options
+        $category_options = fr_form_get_categories();
+        // Array of object options
+        $object_options = fr_form_get_object_options_by_category();
+
+        // Options for $form['fr_form_wrapper_object']['fr_form_object']
+        $options = array();
+
+        // Add 'No Fish integration' option to categories options
+        $category_options = array(0 => t('- No Fish integration -')) + $category_options + array(1 => t('Single datasets'));
+
+        // Category field
+        $form['fr_form_category_objects'] = array(
+          '#type' => 'select',
+          '#title' => t('Group'),
+          '#description' => t('Select one of available groups'),
+          '#options' => $category_options,
+          '#default_value' => isset($node->fr_form_category_objects) ? $node->fr_form_category_objects : 0,
+          '#ajax' => array(
+            'event' => 'change',
+            'wrapper' => 'object-list',
+            'callback' => 'fr_form_list_of_objects_ajax_callback',
+            'method' => 'replace',
+          ),
+        );
+
+        // Disable ability to change category when the node is in edit mode
+        if (isset($node->fr_form_category_objects)) {
+          $form['fr_form_category_objects']['#disabled'] = TRUE;
+        }
+
+        // Additional wrapper for ajax
+        $form['fr_form_wrapper_object'] = array(
+          '#prefix' => '<div id="object-list">',
+          '#suffix' => '</div>',
+        );
+
+        // Check if data $form_state['values'] has info about catgory (ajax) OR
+        $is_ajax_processed = (isset($form_state['values']) && $form_state['values']['fr_form_category_objects'] != 0);
+        // Check if $node->fr_form_category_objects is set and form_state['values'] not exists
+        $is_node = (isset($node->fr_form_category_objects) && !isset($form_state['values']));
+        // Check if $node->fr_form_category_objects is set and form_state['values']['fr_form_category_objects'] is not 0
+        $is_node_and_ajax = (isset($node->fr_form_category_objects) && isset($form_state['values']) && $form_state['values']['fr_form_category_objects'] != 0);
+        // Checks if it's a new node
+        $is_new_node = (!isset($node->fr_form_category_objects) && isset($form_state['values']));
+
+        if ($is_ajax_processed || $is_node || $is_node_and_ajax || $is_new_node) {
+
+          // If category id is provided and is not one - get objects provided by category ID
+          if ((!empty($form_state['values']['fr_form_category_objects']) && $form_state['values']['fr_form_category_objects'] != '1') || !empty($form['#node']->fr_form_category_objects) && $form['#node']->fr_form_category_objects != '1') {
+
+            $category = isset($form_state['values']['fr_form_category_objects']) ? $form_state['values']['fr_form_category_objects'] : $form['#node']->fr_form_category_objects;
+            $options = $object_options[$category];
+            $size = (count($options) <= 15) ? count($options) : '15';
+            $multiple = TRUE;
+            $default_value = isset($node->fr_form_object) ? unserialize($node->fr_form_object) : NULL;
+          } 
+
+          // If category id is provided and is one - get all the objects from an API
+          else if ((!empty($form_state['values']['fr_form_category_objects']) && $form_state['values']['fr_form_category_objects'] == '1') || !empty($form['#node']->fr_form_category_objects) && $form['#node']->fr_form_category_objects == '1') {
+            $category = isset($form_state['values']['fr_form_category_objects']) ? $form_state['values']['fr_form_category_objects'] : $form['#node']->fr_form_category_objects;
+            $options = fr_form_get_object_options_by_category($category);
+            $size = 1;
+            $multiple = FALSE;
+            $default_value = isset($node->fr_form_object) ? $node->fr_form_object : NULL;
+            $disabled = isset($node->fr_form_object) ? TRUE : FALSE;
+          }
+
+          // If there's no category at all get all the categories and objects
+          else if (isset($node->fr_form_category_objects) && isset($object_options[$node->fr_form_category_objects])) {
+            $options = $object_options[$node->fr_form_category_objects];
+            $size = 1;
+          }
+
+          // Element where the list of objects are rendered
+          $form['fr_form_wrapper_object']['fr_form_object'] = array(
+            '#type' => 'select',
+            '#title' => t('FISH object'),
+            '#description' => t('Select FISH object you want this form to post data to.'),
+            '#multiple' => $multiple,
+            '#required' => TRUE,
+            '#default_value' => $default_value,
+            '#options' => $options,
+            '#size'=> $size,
+            '#disabled' => isset($disabled) ? $disabled : FALSE,
+          );
+        }
+
+        // Available operations
+        $form['fr_form_operations'] = array(
+          '#type' => 'select',
+          '#multiple' => TRUE,
+          '#options' => fr_form_available_operations_options(),
+          '#title' => t('Available operations'),
+          '#default_value' => isset($node->fr_form_operations) ? unserialize($node->fr_form_operations) : NULL,
+          '#required' => TRUE,
+          '#size' => 3,
+          '#states' => array(
+            'visible' => array(
+              ':input[name=fr_form_category_objects]' => array('!value' => 0),
+            ),
+          ),
+        );
+
+        // Set the weight of field actions
+        $form['field_actions']['#weight'] = 10;
+        // Set states to make field_actions visible only when category is selected
+        $form['field_actions']['#states'] = array(
+          'visible' => array(
+            ':input[name=fr_form_category_objects]' => array('!value' => 0),
+          ),
+        );
+      } else {
+        unset($form['field_actions']);
+        drupal_set_message(t("Couldn't connect to Fish API. Please contact administrator."), 'warning');
+      }
+      break;
+
+    case 'webform_components_form':
+      if (isset($form['#node']->fr_form_object) && !empty($form['#node']->fr_form_object)) {
+        $form['#attributes']['class'][] = 'webform-fish-api';
+        // Remove unnecessary options
+        unset($form['add']['type']['#options']['fieldset']);
+        unset($form['add']['type']['#options']['file']);
+        unset($form['add']['type']['#options']['grid']);
+        unset($form['add']['type']['#options']['hidden']);
+        $components = $form['#node']->webform['components'];
+        $object = fr_form_transform_object_into_string($form['#node']->fr_form_category_objects, $form['#node']->fr_form_object);
+        $required_fields = fr_form_get_required_fields($form['#node']->fr_form_category_objects, $object);
+        foreach ($components as $key => $value) {
+          $i = 0;
+          foreach ($required_fields as $field) {
+            if ($value['form_key'] == $required_fields[$i]['form_key'] && $value['required'] == '1') {
+              $form['components'][$key]['required']['#disabled'] = TRUE;
+            }
+            $i++;
+          }
+        }
+      }
+      break;
+
+    case 'webform_component_edit_form':
+
+      $form['#process'] = array('webform_client_form_process');
+
+      $component = $form_state['build_info']['args'][1];
+
+      if (isset($node->fr_form_object) && $node->fr_form_object) {
+        // For example: users, config, 1
+        $category = $node->fr_form_category_objects;
+        $object = fr_form_transform_object_into_string($category, $node->fr_form_object);
+
+        // Build options array.
+        $fields = fr_form_get_fields($category, $object);
+        if (!empty($fields)) {
+          
+          $fields = $fields['fields'];
+          // Create array of fields that already exists (excluding the one that is actually processed). We will filter out those fields
+          // so the user won't be able to use the same field twice.
+          $existing_fields = array();
+
+          foreach ($form['#node']->webform['components'] as $value) {
+            if ($value['form_key'] != $component['form_key']) {
+              $existing_fields[$value['form_key']] = $value['form_key'];
+            }
+          }
+          // Build select options (without required fields)
+          $options = fr_form_match_types($fields, $component['type']);
+
+          // Filter out already existing fields by making array_diff
+          $options = array_diff($options, $existing_fields);
+
+          $unmatched_types = array('email', 'layout_box', 'fieldset', 'file', 'grid', 'hidden', 'pagebreak');
+
+          // Check if component type is one of used and if $options has some values
+          if (!in_array($component['type'], $unmatched_types) && !empty($options)) {
+
+            // Set default value to fish field
+            if (isset($form['form_key']['#default_value']) && !empty($form['form_key']['#default_value'])) {
+              $form['form_key']['#default_value'] = $form['form_key']['#default_value'];
+            }
+
+            // Disable select and required field if fr_form_get_field_required_status() returns TRUE
+            if (fr_form_get_field_required_status($category, $object, $component['form_key'])) {
+              $form['form_key']['#disabled'] = TRUE;
+              $form['validation']['required']['#disabled'] = TRUE;
+            }
+
+            $first_option = current($options);
+
+            $form['form_key']['#type'] = 'select';
+            $form['form_key']['#title'] = t('Fish field');
+            $form['form_key']['#options'] = $options;
+            $form['form_key']['#description'] = t('Select field you want to map this Webform field to.');
+            
+            switch ($form['type']['#value']) {
+              /*********************************
+                       SELECT OPTIONS
+              *********************************/
+              case 'select':
+                $form['form_key']['#ajax'] = array(
+                  'callback' => 'fr_form_select_options_callback',
+                  'wrapper' => 'select-options',
+                  'method' => 'replace',
+                  'effect' => 'fade',
+                );
+
+                // Set checkbox "As list" to be checked and hide it
+                $form['display']['aslist']['#default_value'] = 1;
+                $form['display']['aslist']['#access'] = FALSE;
+
+                // Set default value for options and hide it
+                $select_field = (isset($component['form_key']) && !empty($component['form_key'])) ? $form['form_key']['#default_value'] = $component['form_key'] : $first_option;
+                $select_values = fr_form_get_select_values($category, $object, $select_field);
+                $form['extra']['items']['#default_value'] = $select_values;
+                $form['extra']['items']['#access'] = FALSE;
+
+                // Hide default value field
+                $form['value']['#access'] = FALSE;
+
+                // Hide build-in options to get lists like Countries, US States and remove dependent JS
+                $form['extra']['options_source']['#access'] = FALSE;
+                unset($form['#attached']['js']);
+
+                // Hide random order of options
+                $form['display']['optrand']['#access'] = FALSE;
+
+                // Add wrapper for ajax request to select
+                $form['extra']['items']['#prefix'] = '<div id="select-options">';
+                $form['extra']['items']['#suffix'] = '</div>';
+
+                // Change default value by ajax
+                if (isset($form_state['values'])) {
+                  $select_values = fr_form_get_select_values($category, $object, $form_state['values']['form_key']);
+                  $form['extra']['items']['#default_value'] = $select_values;
+                  $form['extra']['items']['#value'] = $select_values;
+                }
+                break;
+
+              /*********************************
+                    OTHER FIELDS - DEFAULT
+              *********************************/
+            default:
+              $form['form_key']['#ajax'] = array(
+                'callback' => 'fr_form_maxlength_callback',
+                'wrapper' => 'max-length',
+                'method' => 'replace',
+                'effect' => 'fade',
+              );
+
+              // If the field has set max length or max disable this field and fill default value with maxlength 
+              if (fr_form_get_field_max_length($category, $object, $component['form_key']) || (fr_form_get_field_max_length($category, $object, $first_option)) && !isset($component['form_key'])) {
+
+                $max_length = isset($component['form_key']) ? fr_form_get_field_max_length($category, $object, $component['form_key']) : fr_form_get_field_max_length($category, $object, $first_option);
+
+                if (isset($form['validation']['max'])) {
+                  $form['validation']['max']['#disabled'] = TRUE;
+                  $form['validation']['max']['#default_value'] = $max_length;
+                }
+                if (isset($form['validation']['maxlength'])) {
+                  $form['validation']['maxlength']['#disabled'] = TRUE;
+                  $form['validation']['maxlength']['#default_value'] = $max_length;
+                }
+              }
+
+              $form['validation']['max']['#prefix'] = '<div id="max-length">';
+              $form['validation']['max']['#suffix'] = '</div>';
+
+              if (isset($form_state['values'])) {
+                $max_length = fr_form_get_field_max_length($category, $object, $form_state['values']['form_key']);
+                if (!empty($max_length)) {
+                  $form['validation']['max']['#default_value'] = $max_length;
+                  $form['validation']['max']['#disabled'] = TRUE;
+                } else {
+                  $form['validation']['max']['#default_value'] = '';
+                  $form['validation']['max']['#disabled'] = FALSE;
+                }
+              }
+            }
+
+            $form['dont_send_to_api'] = array(
+              '#type' => 'checkbox',
+              '#title' => t("Don't send value of this field to Fish"),
+              '#default_value' => isset($component['extra']['dont_send_to_api']) ? $component['extra']['dont_send_to_api'] : FALSE,
+              '#weight' => $form['form_key']['#weight'],
+            );
+
+            // Hide unused fields
+            unset($form['validation']['unique']);
+            unset($form['display']['private']);
+            unset($form['display']['wrapper_classes']);
+            unset($form['display']['css_classes']);
+            unset($form['display']['type']['#options']['select']);
+            unset($form['analysis']);
+            unset($form['validation']['step']);
+
+            // Adds in validate function.
+            array_unshift($form['#validate'], 'fr_form_webform_component_edit_form_validate');
+          }
+
+          // Add extra markup for field delete
+          if (isset($component['form_key'])) {
+            $object = fr_form_transform_object_into_string($form['#node']->fr_form_category_objects, $form['#node']->fr_form_object);
+            if (!$required_status = fr_form_get_field_required_status($form['#node']->fr_form_category_objects, $object, $component['form_key'])) {
+              $link_options = array(
+                'attributes' => array(
+                  'class' => 'delete-component',
+                ),
+              );
+              $form['delete_component'] = array(
+                '#markup' => l(t('Delete field'), 'node/'.$form['#node']->nid.'/webform/components/'.$component['cid'].'/delete', $link_options),
+                '#weight' => 999,
+              );
+            }
+          }
+
+          unset($form['display']['css_classes']);
+          unset($form['display']['private']);
+        }
+        else {
+          drupal_set_message(t('Connection with Fish could not be established. Please try to edit this field later.'), 'error');
+          $form['#disabled'] = TRUE;
+        }
+      }
+      break;
+  }
+}
+
+/**
+ * Implements hook_node_presave().
+ * This hook is implemented because of a bug with field collection.
+ * "Remove" button in Actions field doesn't work on node/%/edit form
+ * So to remove empty fields before it's saved to DB we need to implement this hook.
+ */
+function fr_form_node_presave($node) {
+  if (isset($node->field_actions)) {
+    $actions = $node->field_actions[LANGUAGE_NONE];
+    foreach($actions as $key => $value) {
+      if (empty($value['field_action'][LANGUAGE_NONE][0]['value']) && empty($value['field_field_mapping'][LANGUAGE_NONE][0]['value']) && empty($value['field_title'][LANGUAGE_NONE][0]['value'])) {
+        unset($node->field_actions[LANGUAGE_NONE][$key]);
+      }
+    }
+  }
+}
+
+/** Helper function which checks if category is 1
+ * and if it's TRUE then object is transformed to a string from array source
+ * so array('direcotry.users' => 'directory.users') is transformed into 'directory.users' string
+ */
+function fr_form_transform_object_into_string($category, $object) {
+  if ($category == '1') {
+    if (is_array($object)) {
+      $object = unserialize($object);
+      if (count($object) == 1) {
+        foreach($object as $key => $value) {
+          $object = $key;
+        }
+      }
+    } else if (empty($object)) {
+      $object = NULL;
+    }
+  }
+  return $object;
+}
+
+/** 
+* Generate custom submit buttons 
+*/
+function fr_from_generate_srq_submit_buttons($form) {
+  // If there's any data in field_actions field
+  if (!empty($form['#node']->field_actions)) {
+
+    $node_wrapper = entity_metadata_wrapper('node', $form['#node']);
+    $field_actions = $node_wrapper->field_actions->value();
+
+    if (isset($field_actions[0]->field_action) && !empty($field_actions[0]->field_action)) {
+
+      // Generate submit buttons
+      foreach ($field_actions as $key => $value) {
+
+        // Get actions for new submit buttom
+        $actions = $node_wrapper->field_actions[$key]->field_action->value();
+
+        // Get mapping value just for check if there's any data
+        $mapping = $node_wrapper->field_actions[$key]->field_field_mapping->value();
+
+        if (!empty($actions) && !empty($mapping)) {
+          // Get title for new submit button
+          $title = $node_wrapper->field_actions[$key]->field_title->value();
+
+          // Get info about confirmation state
+          $confirmation = $node_wrapper->field_actions[$key]->field_confirmation->value();
+
+          // Build submit button
+          $form['actions']['action_'.$value->item_id] = array(
+            '#type' => 'submit',
+            '#value' => t($title),
+            '#submit' => array('fr_form_srq_submit_action'),
+            '#disabled' => (isset($form['#node']->submission_edit['object_id'])) ? FALSE : TRUE,
+            '#attributes' => array(
+              'data-confirmation' => ($confirmation != 1) ? array(0) : array(1),
+              'class' => ($confirmation != 1) ? array('no-confirmation') : array('confirmation'),
+            )
+          );
+        }
+      }
+    }
+  }
+  return $form;
+}
+
+/** 
+* Generates list of available options for field_action
+*/
+function fr_form_field_action_get_list() {
+  $srq_list = fr_form_get_srq_list();
+  return $srq_list;
+}
+
+/** 
+ * This function is a callback for Update submit button.
+ * Update submit button is generated when unique field value exists already.
+ */
+function fr_form_submit_update_existing_item($form, $form_state) {
+  // Gather data
+  $data = $form_state['input']['submitted'];
+  
+  // Category - for example: config
+  $category = $form['#node']->fr_form_category_objects;
+
+  // ID of the entry - for example: 26
+  $id = $form_state['values']['submitted']['object_id'];
+
+  // Object name - for example: config.asset_types
+  $object = $form_state['values']['submitted']['dataset_id'];
+
+  // Call update exising item function
+  fr_form_update_existing_item($category, $id, $object, $data);
+  drupal_set_message(t('Existing item has been updated. Thank you.'));
+}
+
+/**
+* Custom SRQ submit action when user clicks different button then default submit, for example: "Print Request"
+*/
+function fr_form_srq_submit_action($form, $form_state) {
+
+  // Get info about node
+  $node_wrapper = entity_metadata_wrapper('node', $form['#node']);
+  // Get field_actions value
+  $field_actions = $node_wrapper->field_actions->value();
+
+  // Extract field collection ID
+  $field_collection_id = explode('_', $form_state['triggering_element']['#parents'][0]);
+  $field_collection_id = $field_collection_id[1];
+
+  // Create data array and add srq value
+  // Add values for field mapping
+  foreach($field_actions as $key => $value) {
+    if ($value->item_id == $field_collection_id) {
+      $data['srq'] = $node_wrapper->field_actions[$key]->field_action->value();
+      $field_mapping = $node_wrapper->field_actions[$key]->field_field_mapping->value();
+    }
+  }
+
+  // Transform string from textarea to an array
+  $field_mapping = list_extract_allowed_values($field_mapping, 'list_text', FALSE);
+  
+  // Add data to $data array values by matching fields from $field_mapping and $form_state
+  foreach ($field_mapping as $key => $value) {
+    $searched_value = NULL;
+    fr_form_recursive_get_value($form_state['values'], $key, $searched_value);
+    $data[$value] = $searched_value;
+  }
+
+  // Confirmation
+  if (isset($field_collection_id)) {
+    drupal_set_message(t('@request has been added.', array('@request' => $form_state['triggering_element']['#value'])));
+  }
+
+  return fr_form_insert_srq_request($data);
+}
+
+/**
+ * Ajax callback - list of objects for group or single objects
+ */
+function fr_form_list_of_objects_ajax_callback($form, &$form_state) {
+  return $form['fr_form_wrapper_object'];
+}
+
+/**
+ * Additional submit function to redirect user on webform node form to node/%/edit page
+ * if the add data (view node) is not chosen in Available operations field.
+ */
+function fr_form_fish_form_submit($form, &$form_state) {
+  $available_operations = fr_form_available_operations($form_state['node']->nid);
+  if (!in_array('2', $available_operations)) {
+    $form_state['redirect'] = 'node/'.$form_state['node']->nid.'/edit';
+  }
+}
+
+/**
+ * Ajax callback select options
+ */
+function fr_form_select_options_callback($form, &$form_state) {
+  return $form['extra']['items'];
+}
+
+/** 
+ * Ajax callback maxlength
+ */
+function fr_form_maxlength_callback($form, &$form_state) {
+  return $form['validation']['max'];
+}
+
+/**
+ * Validate components.
+ *
+ * @todo Add validation for required fields
+ */
+function fr_form_webform_component_edit_form_validate($form, &$form_state) {
+  $values = &$form_state['values'];
+  if (isset($values['dont_send_to_api'])) {
+    $values['extra']['dont_send_to_api'] = $values['dont_send_to_api'];
+    unset($values['dont_send_to_api']);
+  }
+}
+
+/**
+ * Implements hook_webform_submission_insert().
+ */
+function fr_form_webform_submission_insert($node, $submission) {
+  if (isset($node->fr_form_object) && !empty($node->fr_form_object)) {
+    // Delete submission after the node is sent to Fish
+    webform_submission_delete($node, $submission);
+
+    $fish_object = array();
+    $data = array();
+    $object_id = $node->fr_form_category_objects;
+
+    foreach ($submission->data as $key => $value) {
+      $data[$node->webform['components'][$key]['form_key']] = (count($value) > 1) ? $value : $value[0];
+    }
+
+    // Insert new item
+    if (!empty($node->submission_add)) {
+
+      // Rewrite variable. Name of object eg.: directory.user_profiles
+      $object_id = $node->submission_add['object_id'];
+
+      $object = fr_form_transform_object_into_string($node->fr_form_category_objects, $node->fr_form_object);
+      // Get array of fields which are datetime type
+      $fields = fr_form_get_field_structure($node->fr_form_category_objects, $object, 'datetime');
+
+      // Loop over each field and if the field is in our form data then convert the date to 'Y-m-d H:i:s' format
+      foreach ($fields as $key => $value) {
+        if (array_key_exists($value['name'], $data)) {
+          $format = 'd/m/Y H:i';
+          $date = date_parse_from_format($format, str_replace('- ', '', $data[$value['name']]));
+          $data[$value['name']] = mktime($date['hour'], $date['minute'], $date['second'], $date['month'], $date['day'], $date['year']);
+          $data[$value['name']] = date('Y-m-d H:i:s', $data[$value['name']]);
+        }
+      }
+      fr_form_insert_item($object_id, $data);
+    } 
+
+    // Update existing item
+    if (!empty($node->submission_edit['object_id']) && ctype_digit($node->submission_edit['object_id']) && !empty($node->submission_edit['state']) && $node->submission_edit['state'] == 'edit' && !empty($node->submission_edit['dataset_id'])) {
+      fr_form_update_existing_item($node->fr_form_category_objects, $node->submission_edit['object_id'], $node->submission_edit['dataset_id'], $data);
+    }
+  }
+}
+
+/**
+ * Function to update existing entry / item
+ */
+function fr_form_update_existing_item($category, $id, $object, $data) {
+  // Rewrite variable. Name of object eg.: directory.user_profiles
+  $object_id = $object;
+
+  // Get category field structure
+  $category_fields = fr_form_get_fields($category, $object_id);
+
+  // Check if the result of category_fields is array
+  if (is_array($category_fields)) {
+    // Set category fields as fields
+    $category_fields = $category_fields['fields'];
+
+    // Get primary key for this category, for example: id, UserID, etc.
+    $primary = fr_form_get_primary_key($category_fields);
+        
+    // Assign ID field
+    $data[$primary] = $id;
+  }
+
+  // Get array of fields which are datetime type
+  $fields = fr_form_get_field_structure($category, $object_id, 'datetime');
+
+  // Loop over each field and if the field is in our form data then convert the date to 'Y-m-d H:i:s' format
+  foreach ($fields as $key => $value) {
+    if (array_key_exists($value['name'], $data)) {
+      $format = 'd/m/Y H:i';
+      $date = date_parse_from_format($format, str_replace('- ', '', $data[$value['name']]));
+      $data[$value['name']] = mktime($date['hour'], $date['minute'], $date['second'], $date['month'], $date['day'], $date['year']);
+      $data[$value['name']] = date('Y-m-d H:i:s', $data[$value['name']]);
+    }
+  }
+  return fr_form_update_item($object_id, $data);
+}
+
+/**
+ * Implements hook_node_load().
+ */
+function fr_form_node_load($nodes, $types) {
+  // Decide whether any of $types are relevant to our purposes.
+  if (in_array('webform', $types)) {
+
+    $nids = array();
+    $vids = array();
+    foreach ($nodes as $node) {
+      $nids[] = $node->nid;
+      $vids[] = $node->vid;
+    }
+
+    // Gather our extra data for each of these nodes.
+    $result = db_query('SELECT nid, vid, object, object_category FROM {fr_form} WHERE nid IN(:nids) AND vid IN(:vids)', array(':nids' => $nids, ':vids' => $vids));
+
+    $operations = db_query('SELECT operation FROM {fr_form_operations} WHERE nid IN(:nids) AND vid IN(:vids)', array(':nids' => $nids, ':vids' => $vids));
+
+    foreach ($operations as $operation_key => $operation_value) {
+      $form_operations[$operation_key] = $operation_value->operation;
+    }
+
+    $form_operations = serialize($form_operations);
+
+    foreach ($result as $record) {
+      $nodes[$record->nid]->fr_form_object = $record->object;
+      $nodes[$record->nid]->fr_form_operations = $form_operations;
+      $nodes[$record->nid]->fr_form_category_objects = $record->object_category;
+    }
+  }
+}
+
+/**
+ * Implements hook_node_insert().
+ */
+function fr_form_node_insert($node) {
+  if ($node->type == 'webform' && !empty($node->fr_form_category_objects)) {
+    fr_form_node_update($node);
+    
+    $category = $node->fr_form_category_objects;
+    $object = $node->fr_form_object;
+    $object = fr_form_transform_object_into_string($category, $object);
+
+    $required_fields = fr_form_get_required_fields($category, $object);
+
+    if (!empty($required_fields)) {
+      foreach ($required_fields as $key => $value) {
+        $value['nid'] = (int)$node->nid;
+        $value['pid'] = 0;
+        webform_component_insert($value);
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_node_update().
+ */
+function fr_form_node_update($node) {
+  if ($node->type == 'webform' && isset($node->fr_form_category_objects) && isset($node->fr_form_operations)) {
+    $nid = isset($node->nid) ? $node->nid : NULL;
+    $vid = isset($node->vid) ? $node->vid : NULL;
+    
+    // Serialize operations
+    /*
+    if (is_array($node->fr_form_operations)) {
+      $serialized_operations = serialize($node->fr_form_operations);
+    } else {
+      $serialized_operations = $node->fr_form_operations;
+    }*/
+
+    // Serialize objects
+    if (is_array($node->fr_form_object)) {
+      $serialized_object = serialize($node->fr_form_object);
+    } else {
+      $serialized_object = $node->fr_form_object;
+    }
+
+    db_merge('fr_form')
+      ->fields(array('object' => $serialized_object, 'object_category' => $node->fr_form_category_objects))
+      ->key(array('nid' => $nid, 'vid' => $vid))
+      ->execute();
+
+    db_delete('fr_form_operations')
+      ->condition('nid', $nid)
+      ->execute();
+    
+    foreach ($node->fr_form_operations as $operation_key => $operation_value) {
+      db_insert('fr_form_operations')
+        ->fields(array(
+          'nid' => $nid,
+          'vid' => $vid,
+          'operation' => $operation_key,
+      ))
+      ->execute();
+    }
+  }
+}
+
+/**
+ * Implements hook_node_delete().
+ */
+function fr_form_node_delete($node) {
+  if ($node->type == 'webform') {
+    db_delete('fr_form')
+      ->condition('nid', $node->nid)
+      ->execute();
+
+    db_delete('fr_form_operations')
+      ->condition('nid', $node->nid)
+      ->execute();
+  }
+}
+
+/**
+ * Returns valid FISH objects.
+ */
+function fr_form_get_objects() {
+  $options = NULL;
+  $client = new DataSetServiceClient();
+  if ($data = $client->getList()) {
+    $data = $data['datasets'];
+    $options = array();
+    foreach ($data as $key => $value) {
+      if ($value['allowed'] != 'list') {
+        $options[$value['id']] = $value['name'];
+      }
+    }
+    return $options;
+  }
+}
+
+/**
+ * Returns Fish data for given object id.
+ *
+ * @param string $object_type
+ *   Type of Fish object to return.
+ *
+ * @return array|bool
+ *   Fish object.
+ */
+function fr_form_get_data($object) {
+  $data = FALSE;
+  $client = new DataSetServiceClient();
+  $data = $client->getData($object);
+  return $data;
+}
+
+/**
+ * Returns Fish categories.
+ */
+function fr_form_get_categories() {
+  $categories = FALSE;
+  $client = new ObjectDataServiceClient();
+  $data = $client->getCategories();
+  if (isset($data['categories'])) {
+    $data = $data['categories'];
+    foreach ($data as $key => $value) {
+      $categories[$key] = $value['name'];
+    }
+  }
+  return $categories;
+}
+
+/**
+ * Returns Fish objects for specified category or all objects for all categories.
+ */
+function fr_form_get_object_options_by_category($category = NULL) {
+  $object_options = FALSE;
+  $client = new ObjectDataServiceClient();
+  $data = $client->getObjectsByCategory($category);
+
+  // Category has value and it's not one - returns specific category
+  if (isset($category) && isset($data['categories'][$category]) && $category != '1') {
+    $data = $data['categories'][$category];
+    foreach($data as $key => $value) {
+      $object_options[$category][$key] = $value['name']; 
+    }
+
+  // Category is 1 return all available objects
+  } else if (isset($category) && $category == '1') {
+    $object_options = fr_form_get_objects_options();
+
+  // If category is not provided return all the categories and objects in the API
+  } else {
+    if (isset($data['categories'])) {
+      $data = $data['categories'];
+      foreach ($data as $key => $value) {
+        foreach($value as $object_key => $object_value) {
+          $temp_object[$object_key] = $object_value['name'];
+        }
+        $object_options[$key] = $temp_object;
+        unset($temp_object);
+      }
+    }
+  }
+  return $object_options;
+}
+
+/**
+ * Returns Fish data item for given object id and item_id.
+ *
+ * @param string $object_id
+ * @param int @item_id
+ *
+ * @return array|bool
+ *   Fish object.
+ */
+function fr_form_get_data_item($object_id, $item_id) {
+  $data = FALSE;
+  $client = new ObjectDataServiceClient();
+  $data = $client->getItem($object_id, $item_id);
+  if (is_array($data) && !empty($data)) {
+    return $data;  
+  } else {
+    return FALSE;
+  }
+}
+
+ /**
+ * Helper function to get options filled with available FISH objects.
+ */
+function fr_form_get_objects_options() {
+  $fish_objects = fr_form_get_objects();
+  return $fish_objects;
+}
+
+/**
+ * Returns valid Fish field for given object.
+ *
+ * @param string $object_type
+ *   Type of Fish object to return.
+ *
+ * @return array|bool
+ *   Fish object.
+ */
+function fr_form_get_fields($category, $object = NULL) {
+  $field_structure = new ObjectDataServiceClient();
+  if ($category == '1') {
+    $data = $field_structure->getObjectStructure($object);
+  } else {
+    $data = $field_structure->getCategoryStructure($category);
+  }
+  return $data;
+}
+
+/**
+* Returns complete SRQ list as array
+*/
+function fr_form_get_srq_list() {
+  $srq_options = array();
+  $srq_list = new ObjectDataServiceClient();
+  $data = $srq_list->getSRQList();
+  if (!empty($data['srqs'])) {
+    $data = $data['srqs'];
+    foreach ($data as $key => $value) {
+      $srq_options[$value['SRQ']] = $value['Description'];
+    }
+  }
+  return $srq_options;
+}
+
+/**
+ * Add new SRQ item.
+ *
+ * @param array $srq_data
+ *   Type of SRQ object.
+ */
+function fr_form_insert_srq_request($srq_data) {
+  $insert_srq = new ObjectDataServiceClient();
+  $data = $insert_srq->insertSRQItem($srq_data);
+  return $data;
+}
+
+/**
+ * Add new item to FISH
+ *
+ * @param string $object_id
+ *   Type of Fish object.
+ * @param array $data
+ *   Fish object.
+ */
+function fr_form_insert_item($object_id, $data) {
+  $insert_item = new ObjectDataServiceClient();
+  $insert_item = $insert_item->insertItem($object_id, $data);
+  return $insert_item;
+}
+
+/**
+ * Updates exising FISH item
+ *
+ * @param string $object_id
+ *   Type of Fish object.
+ * @param array $data
+ *   Fish object (must at least contain id).
+ */
+function fr_form_update_item($object_id, $data) {
+  $update_item = new ObjectDataServiceClient();
+  $update_item = $update_item->updateItem($object_id, $data);
+  return $update_item;
+}
+
+/**
+ * Implements hook_init().
+ */
+function fr_form_init() {
+  drupal_add_library('system', 'ui.dialog');
+}
+
+/**
+ * Implements hook_menu_local_tasks_alter().
+ */
+function fr_form_menu_local_tasks_alter(&$data, $router_item, $root_path) {
+  if ($root_path == 'admin/forms') {
+    $item = menu_get_item('node/add/webform');
+
+    if ($item['access']) {
+      $item['title'] = t('Add form');
+      $item['localized_options']['query']['destination'] = 'admin/forms';
+      $data['actions']['output'][] = array(
+        '#theme' => 'menu_local_action',
+        '#link' => $item,
+      );
+    }
+  }
+}

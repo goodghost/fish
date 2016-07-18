@@ -1,0 +1,69 @@
+<?php
+
+/**
+ * Debugging for non power users.
+ */
+function simple_debug($var) {
+  drupal_set_message('<pre>' . print_r($var, 1) . '</pre>');
+}
+
+/**
+ * Execute one time dpm.
+ *
+ * @see dpm
+ */
+function dpm_once($input, $name = NULL, $type = 'status') {
+  $backtrace = debug_backtrace();
+  $caller = array_shift($backtrace);
+  $executed = &drupal_static(__FUNCTION__ . $caller['file'] . $caller['line'], FALSE);
+  if (!$executed) {
+    $executed = TRUE;
+    if (function_exists('kprint_r')) {
+      if (user_access('access devel information')) {
+        $export = kprint_r($input, TRUE, $name);
+        drupal_set_message($export, $type);
+      }
+      return $input;
+    }
+  }
+}
+
+/**
+ * Execute dpm without checking user's has permission to 'access devel information'.
+ *
+ * @see dpm
+ */
+function dpm_visible($input, $name = NULL, $type = 'status') {
+  // We do not want to krumo() strings and integers and such.
+  if (merits_krumo($input)) {
+    $output = (isset($name) ? $name . ' => ' : '') . krumo_ob($input);
+    drupal_set_message($output, $type);
+    return $input;
+  }
+}
+
+/**
+ * Helper function to insert horizontal lines in through dd() function.
+ */
+function dd_line($label = NULL) {
+  $message = '--------------------------------------------------------------';
+  if ($label) {
+    $message .= ' ' . $label;
+  }
+  drupal_debug($message);
+}
+
+/**
+ * Debug variable in nice formatted box.
+ */
+function dd_box($data, $label = NULL) {
+  drupal_debug('/-------------------------------------------------------------\\');
+  if ($label) {
+    drupal_debug('| ' . $label);
+    drupal_debug('|-------------------------------------------------------------|');
+  }
+  drupal_debug($data);
+
+  drupal_debug('\-------------------------------------------------------------/');
+  drupal_debug("\n");
+}

@@ -1,0 +1,1364 @@
+<?php
+/**
+ * @file Main module file for Dataset field module.
+ */
+
+define('DATASET_FIELD_FILTER_OPERATOR_NO_VALUE', 1);
+
+include_once 'includes/filter_element_callbacks.inc';
+
+include_once 'includes/display_types/gauge.inc';
+include_once 'includes/display_types/line_chart.inc';
+include_once 'includes/display_types/pie_chart.inc';
+include_once 'includes/display_types/table.inc';
+
+/**
+ * Implements hook_field_info().
+ */
+function fr_dataset_field_field_info() {
+  return array(
+    'dataset' => array(
+      'label' => t('Dataset'),
+      'description' => t('This field stores arbitrary data about datasets.'),
+      'default_widget' => 'dataset_select',
+      'default_formatter' => 'dataset_visualization',
+    ),
+  );
+}
+
+/**
+ * Implements hook_preprocess_HOOK().
+ */
+function fr_dataset_field_preprocess_page(&$variables) {
+  // We need to add this script on every page so charts are displayed when added
+  // through panels.
+  if (isset($variables['node']) && $variables['node']->type == 'dashboard') {
+    drupal_add_library('fr_dataset_field', 'visualization');
+  }
+}
+
+/**
+ * Implements hook_field_is_empty().
+ */
+function fr_dataset_field_field_is_empty($item, $field) {
+  return empty($item['dataset']);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Widget.
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Implements hook_field_widget_info().
+ *
+ * @see fr_dataset_field_field_widget_form()
+ */
+function fr_dataset_field_field_widget_info() {
+  return array(
+    'dataset_select' => array(
+      'label' => t('Dependent dropdown'),
+      'field types' => array('dataset'),
+    ),
+  );
+}
+
+/**
+ * Get supported filter tokens.
+ *
+ * @return array
+ *   - TOKEN_NAME: Machine name of token.
+ *     - name: Name of token displayed to user.
+ *     - value_callback: Callback that replaces token with value.
+ */
+function fr_dataset_field_get_tokens() {
+  $tokens = array(
+    'today' => array(
+      'name' => t('Today'),
+      'value_callback' => 'fr_dataset_field_token_value_date',
+    ),
+    'last_week' => array(
+      'name' => t('Last week'),
+      'value_callback' => 'fr_dataset_field_token_value_date',
+    ),
+    'current_week' => array(
+      'name' => t('Current week'),
+      'value_callback' => 'fr_dataset_field_token_value_date',
+    ),
+    'last_weekend' => array(
+      'name' => t('Last weekend'),
+      'value_callback' => 'fr_dataset_field_token_value_date',
+    ),
+    'last_month' => array(
+      'name' => t('Last month'),
+      'value_callback' => 'fr_dataset_field_token_value_date',
+    ),
+    'current_month' => array(
+      'name' => t('Current month'),
+      'value_callback' => 'fr_dataset_field_token_value_date',
+    ),
+    'last_year' => array(
+      'name' => t('Last year'),
+      'value_callback' => 'fr_dataset_field_token_value_date',
+    ),
+    'current_year' => array(
+      'name' => t('Current year'),
+      'value_callback' => 'fr_dataset_field_token_value_date',
+    ),
+    'current_user_username' => array(
+      'name' => t('Current user username'),
+      'value_callback' => 'fr_dataset_field_token_value_current_username',
+    ),
+    'current_user_display_name' => array(
+      'name' => t('Current user display name'),
+      'value_callback' => 'fr_dataset_field_token_value_current_user_display_name',
+    ),
+  );
+  return $tokens;
+}
+
+/**
+ * Replace token with value.
+ *
+ * @param $token
+ * @param $data_type
+ * @return mixed|null
+ */
+function fr_dataset_field_get_token_value($token, $data_type) {
+  $token_info = fr_dataset_field_get_tokens();
+  if (isset($token_info[$token])) {
+    $token_info = $token_info[$token];
+    if (isset($token_info['value_callback']) && is_callable($token_info['value_callback'])) {
+      return call_user_func($token_info['value_callback'], $data_type);
+    }
+  }
+  return NULL;
+}
+
+/**
+ * Get list of tokens for select element associate with given field type and operator.
+ *
+ * @param $field_type
+ * @param $operator
+ *
+ * @return array
+ */
+function fr_dataset_field_get_token_options($field_type, $operator) {
+  $data_types = fr_dataset_field_get_data_types();
+  $operator_definition = $data_types[$field_type]['operators'][$operator];
+
+  if (isset($operator_definition['tokens'])) {
+    $token_info = fr_dataset_field_get_tokens();
+    $options = array();
+    foreach ($token_info as $token_key => $token) {
+      if (in_array($token_key, $operator_definition['tokens'])) {
+        $options[$token_key] = $token['name'];
+      }
+    }
+    return $options;
+  }
+  else {
+    return array();
+  }
+}
+
+/**
+ * Get user's LDAP username for token replacement.
+ */
+function fr_dataset_field_token_value_current_username($filter, $field_structure) {
+  return fr_user_get_username();
+}
+
+/**
+ * Get user's LDAP display name for token replacement.
+ */
+function fr_dataset_field_token_value_current_user_display_name($filter, $field_structure) {
+  return fr_user_get_display_name();
+}
+
+/**
+ * Value callback for date tokens.
+ * 
+ * @param $filter
+ * @param $field_structure
+ * @return array
+ */
+function fr_dataset_field_token_value_date($filter, $field_structure) {
+  switch ($filter['value']) {
+    case 'today':
+      $date_from = 'today midnight';
+      $date_to = 'today 23:59:59';
+      break;
+    case 'last_week':
+      $date_from = 'Monday last week midnight';
+      $date_to = 'Sunday last week 23:59:59';
+      break;
+    case 'current_week':
+      $date_from = 'Monday this week midnight';
+      $date_to = 'Sunday this week 23:59:59';
+      break;
+    case 'last_weekend':
+      $date_from = 'Saturday last week midnight';
+      $date_to = 'Sunday last week 23:59:59';
+      break;
+    case 'last_month':
+      $date_from = 'first day of last month midnight';
+      $date_to = 'last day of last month 23:59:59';
+      break;
+    case 'current_month':
+      $date_from = 'first day of this month midnight';
+      $date_to = 'last day of this month 23:59:59';
+      break;
+    case 'last_year':
+      $date_from = 'first day of January last year midnight';
+      $date_to = 'last day of December last year 23:59:59';
+      break;
+    case 'current_year':
+      $date_from = 'first day of January this year midnight';
+      $date_to = 'last day of December this year 23:59:59';
+      break;
+  }
+
+  switch ($field_structure['type']) {
+    case 'date':
+      $date_format = DATE_FORMAT_DATE;
+      break;
+    case 'datetime':
+    default:
+      $date_format = DATE_FORMAT_DATETIME;
+  }
+
+  $time1 = new DateTime();
+  $time1->modify($date_from);
+  $date1 = $time1->format($date_format);
+
+  $time2 = new DateTime();
+  $time2->modify($date_to);
+  $date2 = $time2->format($date_format);
+
+  return array(
+    'value1' => $date1,
+    'value2' => $date2,
+  );
+}
+
+/**
+ * Get supported filter operators.
+ *
+ * @return array
+ *   - DATA_TYPE: Machine name of data type.
+ *     - operators: Array of operators:
+ *       - OPERATOR_NAME: Machine name of operator saved in DB.
+ *         - name: Name of operator displayed to user.
+ *         - element_callback: Optional callback for value element.
+ */
+function fr_dataset_field_get_data_types() {
+  $types = array(
+    'varchar' => array(
+      'operators' => array(
+        '=' => array('name' => t('Is equal to'), 'element_callback' => 'fr_dataset_field_filter_value_single_textfield_element', 'tokens' => array('current_user_username', 'current_user_display_name')),
+        '!=' => array('name' => t('Is not equal to'), 'element_callback' => 'fr_dataset_field_filter_value_single_textfield_element', 'tokens' => array('current_user_username', 'current_user_display_name')),
+        'contains' => array('name' => t('Contains'), 'element_callback' => 'fr_dataset_field_filter_value_single_textfield_element'),
+        'not_contains' => array('name' => t('Not contains'), 'element_callback' => 'fr_dataset_field_filter_value_single_textfield_element'),
+        'empty' => array('name' => t('Is empty'), 'element_callback' => DATASET_FIELD_FILTER_OPERATOR_NO_VALUE),
+        'not_empty' => array('name' => t('Is not empty'), 'element_callback' => DATASET_FIELD_FILTER_OPERATOR_NO_VALUE),
+      ),
+    ),
+    'text' => array(
+      'operators' => array(
+        '=' => array('name' => t('Is equal to'), 'element_callback' => 'fr_dataset_field_filter_value_single_textfield_element', 'tokens' => array('current_user_username', 'current_user_display_name')),
+        '!=' => array('name' => t('Is not equal to'), 'element_callback' => 'fr_dataset_field_filter_value_single_textfield_element', 'tokens' => array('current_user_username', 'current_user_display_name')),
+        'contains' => array('name' => t('Contains'), 'element_callback' => 'fr_dataset_field_filter_value_single_textfield_element'),
+        'not_contains' => array('name' => t('Not contains'), 'element_callback' => 'fr_dataset_field_filter_value_single_textfield_element'),
+      ),
+    ),
+    'int' => array(
+      'operators' => array(
+        '<' => array('name' => t('Is less than'), 'element_callback' => 'fr_dataset_field_filter_value_single_number_element'),
+        '<=' => array('name' => t('Is less than or equal to'), 'element_callback' => 'fr_dataset_field_filter_value_single_number_element'),
+        '=' => array('name' => t('Is equal to'), 'element_callback' => 'fr_dataset_field_filter_value_single_number_element'),
+        '!=' => array('name' => t('Is not equal to'), 'element_callback' => 'fr_dataset_field_filter_value_single_number_element'),
+        '>=' => array('name' => t('Is greater than or equal to'), 'element_callback' => 'fr_dataset_field_filter_value_single_number_element'),
+        '>' => array('name' => t('Is greater than'), 'element_callback' => 'fr_dataset_field_filter_value_single_number_element'),
+        'between' => array(
+          'name' => t('Is in range'), 'element_callback' => 'fr_dataset_field_filter_value_range_number_element',
+        ),
+        'empty' => array('name' => t('Is empty (NULL)'), 'element_callback' => DATASET_FIELD_FILTER_OPERATOR_NO_VALUE),
+        'not empty' => array('name' => t('Is not empty (NOT NULL)'), 'element_callback' => DATASET_FIELD_FILTER_OPERATOR_NO_VALUE),
+      ),
+    ),
+    'bool' => array(
+      'operators' => array(
+        'is_true' => array('name' => t('Is true'), 'element_callback' => DATASET_FIELD_FILTER_OPERATOR_NO_VALUE),
+        'is_false' => array('name' => t('Is false'), 'element_callback' => DATASET_FIELD_FILTER_OPERATOR_NO_VALUE),
+      ),
+    ),
+    'date' => array(
+      'operators' => array(
+        '<' => array('name' => t('Is less than'), 'element_callback' => 'fr_dataset_field_filter_value_single_date_element'),
+        '<=' => array('name' => t('Is less than or equal to'), 'element_callback' => 'fr_dataset_field_filter_value_single_date_element'),
+        '=' => array('name' => t('Is equal to'), 'element_callback' => 'fr_dataset_field_filter_value_single_date_element'),
+        '!=' => array('name' => t('Is not equal to'), 'element_callback' => 'fr_dataset_field_filter_value_single_date_element'),
+        '>=' => array('name' => t('Is greater than or equal to'), 'element_callback' => 'fr_dataset_field_filter_value_single_date_element'),
+        '>' => array('name' => t('Is greater than'), 'element_callback' => 'fr_dataset_field_filter_value_single_date_element'),
+        'between' => array(
+          'name' => t('Is in range'), 'element_callback' => 'fr_dataset_field_filter_value_range_date_element',
+          'tokens' => array('today', 'last_week', 'current_week', 'last_weekend', 'last_month', 'current_month', 'last_year', 'current_year'),
+        ),
+        'empty' => array('name' => t('Is empty (NULL)'), 'element_callback' => DATASET_FIELD_FILTER_OPERATOR_NO_VALUE),
+        'not empty' => array('name' => t('Is not empty (NOT NULL)'), 'element_callback' => DATASET_FIELD_FILTER_OPERATOR_NO_VALUE),
+      ),
+    ),
+  );
+
+  // They have the same operators.
+  $types['mediumblob'] = $types['text'];
+  $types['double'] = $types['int'];
+  $types['float'] = $types['int'];
+  $types['tinyint'] = $types['int'];
+  $types['timestamp'] = $types['int'];
+
+  $types['datetime'] = $types['date'];
+  foreach ($types['datetime']['operators'] as &$operator) {
+    if ($operator['element_callback'] == 'fr_dataset_field_filter_value_single_date_element') {
+      $operator['element_callback'] = 'fr_dataset_field_filter_value_single_datetime_element';
+    }
+  }
+  $types['datetime']['operators']['between']['element_callback'] = 'fr_dataset_field_filter_value_range_datetime_element';
+
+  return $types;
+}
+
+/**
+ * Helper function to get options for filter operator.
+ */
+function fr_dataset_field_get_filter_operator_options($type) {
+  $types = fr_dataset_field_get_data_types();
+  $type = $types[$type];
+  $options = array();
+  foreach ($type['operators'] as $operator_key => $operator_info) {
+    $options[$operator_key] = $operator_info['name'];
+  }
+  return $options;
+}
+
+/**
+ * Helper function that returns supported types of charts.
+ * @return array
+ */
+function fr_dataset_field_get_display_types() {
+  return array(
+    'table' => array(
+      'name' => t('Table'),
+      'settings_form' => 'fr_dataset_field_display_table_settings_form',
+      'data_alter_callback' => 'fr_dataset_field_display_table_data_alter_callback',
+    ),
+    'pie_chart' => array(
+      'name' => t('Pie chart'),
+      'settings_form' => 'fr_dataset_field_display_pie_chart_settings_form',
+    ),
+    'bar_chart' => array(
+      'name' => t('Bar chart'),
+      'settings_form' => 'fr_dataset_field_display_line_chart_settings_form',
+    ),
+    'line_chart' => array(
+      'name' => t('Line chart'),
+      'settings_form' => 'fr_dataset_field_display_line_chart_settings_form',
+    ),
+    'gauge' => array(
+      'name' => t('Gauge'),
+      'settings_form' => 'fr_dataset_field_display_gauge_settings_form',
+    ),
+  );
+}
+
+/**
+ * Helper function to get options for filter operator.
+ */
+function fr_dataset_field_get_display_type_options() {
+  $types = fr_dataset_field_get_display_types();
+  $options = array();
+  foreach ($types as $type_key => $type_info) {
+    $options[$type_key] = $type_info['name'];
+  }
+  return $options;
+}
+
+/**
+ * Helper function to parse fields.
+ *
+ * @param $raw_fields
+ * @param bool $remove_disabled
+ * @return array
+ */
+function fr_dataset_field_parse_fields($raw_fields, $remove_disabled = TRUE) {
+  $fields = array();
+  foreach ($raw_fields as $key => $field) {
+    if (!$remove_disabled || ($remove_disabled && !empty($field['enabled']))) {
+      list(, $field_name) = explode(':', $key);
+      $fields[$field_name] = $field;
+    }
+  }
+  // Sort
+  uasort($fields, function($a, $b) {
+    if ($a['weight'] == $b['weight']) {
+      return 0;
+    }
+    return ($a['weight'] < $b['weight']) ? -1 : 1;
+  });
+  return $fields;
+}
+
+/**
+ * Implements hook_field_widget_form().
+ */
+function fr_dataset_field_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
+  $form['#attached']['css'][] = drupal_get_path('module', 'fr_dataset_field') . '/css/fr_dataset_field.css';
+
+  $dataset_value = isset($items[$delta]['dataset']) ? $items[$delta]['dataset'] : '';
+
+  $fields_value = isset($items[$delta]['fields']) ? unserialize($items[$delta]['fields']) : array();
+  $filters_value = isset($items[$delta]['filters']) ? unserialize($items[$delta]['filters']) : array();
+
+  $display_settings_value = isset($items[$delta]['display_settings']) ? unserialize($items[$delta]['display_settings']) : array();
+
+  $display_type_value = isset($items[$delta]['display_type']) ? $items[$delta]['display_type'] : '';
+
+  $data_types = fr_dataset_field_get_data_types();
+
+  if (isset($form_state['triggering_element'])) {
+    $triggering_element = $form_state['triggering_element'];
+  }
+  else {
+    $triggering_element = array();
+  }
+
+  switch ($instance['widget']['type']) {
+
+    case 'dataset_select':
+      $element += array(
+        '#type' => 'fieldset',
+        '#attached' => array(
+          'js' => array(
+            array('data' => drupal_get_path('module', 'fr_dataset_field') . '/js/dataset_widget.js'),
+          ),
+        ),
+        '#prefix' => '<div id="field-select-wrapper">',
+        '#suffix' => '</div>',
+      );
+
+      try {
+        $client = new DataSetServiceClient();
+        $data = $client->getList();
+
+        if (empty($data)) {
+          form_set_error('', t("Error occurred while loading list of views."));
+          throw new ServiceException("Error occurred while loading list of views.");
+        }
+
+        $dataset_options = array();
+        foreach ($data['datasets'] as $dataset) {
+          $dataset_options[$dataset['id']] = $dataset['name'];
+        }
+
+        // Select SQL view.
+        $element['dataset'] = array(
+          '#title' => t('Dataset view'),
+          '#type' => 'select',
+          '#empty_value' => '',
+          '#options' => $dataset_options,
+          '#default_value' => $dataset_value,
+          '#required' => $instance['required'],
+          '#ajax' => array(
+            'callback' => 'fr_dataset_field_dataset_ajax_callback',
+            'wrapper' => 'field-select-wrapper',
+          ),
+        );
+
+        if (isset($form_state['input'][$field['field_name']][$langcode][$delta])) {
+          $submitted_values = $form_state['input'][$field['field_name']][$langcode][$delta];
+        }
+        else {
+          $submitted_values = array();
+        }
+
+        if (isset($submitted_values['dataset'])) {
+          $dataset_value = $submitted_values['dataset'];
+        }
+
+        // We have any datasets returned from API.
+        if ($dataset_value) {
+
+          ////////////////////////////////////////////////////////////////////
+          // Fields
+          ////////////////////////////////////////////////////////////////////
+
+          $client = new DataSetServiceClient();
+          $data = $client->getStructure($dataset_value);
+
+          $element['fields'] = array(
+            '#type' => 'item',
+            '#tree' => TRUE,
+            '#title' => t('Fields to display'),
+            '#theme' => 'dataset_fields_table',
+          );
+
+          $fields = array();
+          $default_weight = 0;
+          foreach ($data['fields'] as $field) {
+            // Hide unknown data types.
+            if (!isset($data_types[$field['type']])) {
+              continue;
+            }
+
+            if (isset($fields_value[$field['name']])) {
+              $field['enabled'] = $fields_value[$field['name']]['enabled'];
+              $field['weight'] = $fields_value[$field['name']]['weight'];
+            }
+            else {
+              $field['enabled'] = 0;
+              $field['weight'] = $default_weight++;
+            }
+            $fields[$field['name']] = $field;
+          }
+
+          // Sort fields.
+          uasort($fields, function($a, $b) {
+            if ($a['weight'] == $b['weight']) {
+              return 0;
+            }
+            return ($a['weight'] < $b['weight']) ? -1 : 1;
+          });
+
+          $field_options = $field_types = array();
+          foreach ($fields as $column) {
+            $field_options[$column['name']] = $column['name'] . ' (' . $column['type'] . ')';
+            $field_types[$column['name']] = $column['type'];
+          }
+
+          $form_state['dataset_field_types'] = $field_types;
+
+          // Create table rows for fields.
+          foreach ($field_options as $field_key => $field_name) {
+            $element['fields']["field:$field_key"] = array();
+
+            $element['fields']["field:$field_key"]['enabled'] = array(
+              '#type' => 'checkbox',
+              '#title' => $field_name,
+              // Stand alone text is required for row weights.
+              '#prefix' => '<span class="tabledrag-label">' . t('Weight') . '</span>',
+              '#default_value' => isset($fields_value[$field_key]['enabled']) ? $fields_value[$field_key]['enabled'] : TRUE,
+              '#ajax' => array(
+                'callback' => 'fr_dataset_field_display_type_ajax_callback',
+                'wrapper' => 'display-settings-fieldset-wrapper',
+                'progress' => array('type' => 'none'),
+                'effect' => 'fade',
+              ),
+            );
+
+            $element['fields']["field:$field_key"]['label'] = array(
+              '#type' => 'textfield',
+              '#title' => t('Label'),
+              '#size' => 40,
+              '#title_display' => 'invisible',
+              '#default_value' => isset($fields_value[$field_key]['label']) ? $fields_value[$field_key]['label'] : NULL,
+            );
+
+            $element['fields']["field:$field_key"]['weight'] = array(
+              '#type' => 'weight',
+              '#delta' => 50,
+              '#default_value' => isset($fields_value[$field_key]['weight']) ? $fields_value[$field_key]['weight'] : $fields[$field_key]['weight'],
+              '#title' => t('Weight for @field', array('@field' => $field_name)),
+              '#title_display' => 'invisible',
+            );
+          }
+
+          ////////////////////////////////////////////////////////////////////
+          // Filters
+          ////////////////////////////////////////////////////////////////////
+
+          $element['filters'] = array(
+            '#type' => 'item',
+            '#title' => t('Filters'),
+            '#prefix' => '<div id="filters-fieldset-wrapper">',
+            '#suffix' => '</div>',
+          );
+
+          // User changed dataset view from select element.
+          if (isset($triggering_element['#ajax']['callback']) && $triggering_element['#ajax']['callback'] == 'fr_dataset_field_dataset_ajax_callback') {
+            $form_state['original_filters'] = array();
+            $form_state['filters_count'] = 0;
+          }
+          elseif (!isset($form_state['original_filters'])) {
+            $form_state['original_filters'] = $filters_value;
+            $form_state['filters_count'] = count($filters_value);
+          }
+
+          // Show table only if there are added any filters.
+          if ($form_state['filters_count'] > 0) {
+            $element['filters']['table'] = array(
+              '#type' => 'item',
+              '#tree' => TRUE,
+              '#theme' => 'dataset_filters_table',
+            );
+          }
+          else {
+            $element['filters']['table'] = array(
+              '#type' => '#value',
+            );
+          }
+
+          // Populate table with filters.
+          foreach ($form_state['original_filters'] as $i => $filter) {
+            // Override filter variable if user changed values in form.
+            if (isset($submitted_values['filters']['table']["filter:$i"])) {
+              $filter = $submitted_values['filters']['table']["filter:$i"];
+            }
+
+            if (!empty($filter['field'])) {
+              $field_type = $field_types[$filter['field']];
+            }
+            else {
+              $field_type = NULL;
+            }
+
+            // Get options for operator.
+            if ($field_type) {
+              // Set operators for specific field type.
+              $operator_options = fr_dataset_field_get_filter_operator_options($field_type);
+            }
+            else {
+              $operator_options = array();
+            }
+
+            // Reset operator if id doesn't exists (when field type was changed).
+            if (!isset($operator_options[$filter['operator']])) {
+              $filter['operator'] = NULL;
+              $filter['value_type'] = NULL;
+              $filter['value'] = NULL;
+              $filter['token'] = 'static';
+            }
+
+            ////////////////////////////////////////////////////////////////////
+            // Filter field.
+            ////////////////////////////////////////////////////////////////////
+
+            $element['filters']['table']["filter:$i"]['field'] = array(
+              '#row_id' => $i,
+              '#type' => 'select',
+              //'#description' => '<pre><small>' . print_r($filter, 1) . '</small></pre>',
+              '#title' => t('Field'),
+              '#title_display' => 'invisible',
+              '#required' => TRUE,
+              '#options' => $field_options,
+              '#empty_option' => t('- Select -'),
+              '#default_value' => isset($filter['field']) ? $filter['field'] : NULL,
+              '#ajax' => array(
+                'callback' => 'fr_dataset_field_filters_ajax_callback',
+                'wrapper' => 'filters-fieldset-wrapper',
+                'progress' => array('type' => 'none'),
+              ),
+            );
+
+            ////////////////////////////////////////////////////////////////////
+            // Filter  operator.
+            ////////////////////////////////////////////////////////////////////
+
+            if (!empty($filter['field'])) {
+              $element['filters']['table']["filter:$i"]['operator'] = array(
+                '#row_id' => $i,
+                '#type' => 'select',
+                '#title' => t('Operator'),
+                '#title_display' => 'invisible',
+                '#prefix' => '<div id="filters-fieldset-operator-wrapper-' . $i . '">',
+                '#suffix' => '</div>',
+                '#required' => TRUE,
+                '#options' => $operator_options,
+                '#empty_option' => t('- Select -'),
+                '#default_value' => !empty($filter['operator']) ? $filter['operator'] : NULL,
+                '#ajax' => array(
+                  'callback' => 'fr_dataset_field_filters_ajax_callback',
+                  'wrapper' => 'filters-fieldset-wrapper',
+                  'progress' => array('type' => 'none'),
+                ),
+              );
+            }
+            else {
+              $element['filters']['table']["filter:$i"]['operator'] = array();
+            }
+
+            ////////////////////////////////////////////////////////////////////
+            // Value type.
+            ////////////////////////////////////////////////////////////////////
+
+            if (!empty($filter['operator'])) {
+              if (isset($data_types[$field_type]['operators'][$filter['operator']])) {
+                $operator_definition = $data_types[$field_type]['operators'][$filter['operator']];
+              }
+              else {
+                $operator_definition = array();
+              }
+
+              // Get token options.
+              if (!empty($operator_definition['tokens'])) {
+                $token_options = fr_dataset_field_get_token_options($field_type, $filter['operator']);
+              }
+              else {
+                $token_options = array();
+              }
+
+              if (!empty($token_options)) {
+                $element['filters']['table']["filter:$i"]['value_type'] = array(
+                  '#row_id' => $i,
+                  '#type' => 'radios',
+                  '#title' => t('Value type'),
+                  '#title_display' => 'invisible',
+                  '#options' => array(
+                    'static' => t('Static'),
+                    'token' => t('Token (dynamic)'),
+                  ),
+                  '#default_value' => isset($filter['value_type']) ? $filter['value_type'] : 'static',
+                  '#ajax' => array(
+                    'callback' => 'fr_dataset_field_filters_ajax_callback',
+                    'wrapper' => 'filters-fieldset-wrapper',
+                    'progress' => array('type' => 'none'),
+                  ),
+                );
+              }
+              else {
+                $element['filters']['table']["filter:$i"]['value_type'] = array(
+                  '#type' => 'value',
+                  '#value' => 'static',
+                );
+              }
+            }
+            else {
+              $element['filters']['table']["filter:$i"]['value_type'] = array();
+            }
+
+            ////////////////////////////////////////////////////////////////////
+            // Filter value.
+            ////////////////////////////////////////////////////////////////////
+
+            $value_element = array();
+
+            if (!empty($filter['operator'])) {
+              $value_element = array(
+                '#row_id' => $i,
+              );
+
+              // Operator don't use value field.
+              if (isset($operator_definition['element_callback']) && $operator_definition['element_callback'] == DATASET_FIELD_FILTER_OPERATOR_NO_VALUE) {
+                $value_element += array(
+                  '#markup' => t('N/A'),
+                );
+              }
+              elseif ($filter['value_type'] == 'token' && !empty($token_options)) {
+                $value_element = array(
+                  '#title' => t('Value'),
+                  '#title_display' => 'invisible',
+                  '#type' => 'select',
+                  '#options' => $token_options,
+                  '#default_value' => $filter['value'],
+                );
+              }
+              // Operator use value field so let's call function to retrieve it.
+              elseif (isset($operator_definition['element_callback']) && is_callable($operator_definition['element_callback'])) {
+                $value_element += call_user_func($operator_definition['element_callback'], $filter['value']);
+              }
+            }
+
+            $element['filters']['table']["filter:$i"]['value'] = $value_element;
+
+            ////////////////////////////////////////////////////////////////////
+            // Exposed field.
+            ////////////////////////////////////////////////////////////////////
+
+            if ($filter['operator'] && !isset($value_element['#markup'])) {
+              $element['filters']['table']["filter:$i"]['exposed'] = array(
+                '#row_id' => $i,
+                '#type' => 'checkbox',
+                '#title' => t('Exposed'),
+                '#title_display' => 'invisible',
+                '#default_value' => isset($filter['exposed']) ? $filter['exposed'] : NULL,
+              );
+            }
+            elseif ($filter['operator']) {
+              $element['filters']['table']["filter:$i"]['exposed'] = array(
+                '#markup' => t('N/A'),
+              );
+            }
+
+            ////////////////////////////////////////////////////////////////////
+            // Button to remove filter.
+            ////////////////////////////////////////////////////////////////////
+
+            $element['filters']['table']["filter:$i"]['remove'] = array(
+              '#row_id' => $i,
+              '#type' => 'submit',
+              // Each value needs to be unique, later (in pre_render) we change it back to "Remove".
+              '#value' => "filter_remove_$i",
+              '#title' => t('Remove'),
+              '#submit' => array('fr_dataset_field_form_remove_submit_callback'),
+              '#pre_render' => array('fr_dataset_field_submit_button_pre_render'),
+              '#limit_validation_errors' => array(),
+              '#attributes' => array('row_id' => $i),
+              '#ajax' => array(
+                'callback' => 'fr_dataset_field_filters_ajax_callback',
+                'wrapper' => 'filters-fieldset-wrapper',
+                'progress' => array('type' => 'none'),
+              ),
+            );
+          }
+
+          ////////////////////////////////////////////////////////////////////
+          // The rest of widget form.
+          ////////////////////////////////////////////////////////////////////
+
+          // Add filter button.
+          $element['filters']['add_filter'] = array(
+            '#type' => 'submit',
+            '#value' => t('Add filter'),
+            '#submit' => array('fr_dataset_field_form_add_submit_callback'),
+            '#limit_validation_errors' => array(),
+            '#ajax' => array(
+              'callback' => 'fr_dataset_field_filters_ajax_callback',
+              'wrapper' => 'filters-fieldset-wrapper',
+            ),
+          );
+
+          // Display type.
+          $element['display_type'] = array(
+            '#title' => t('Display type'),
+            '#description' => t('Define representation of the data.'),
+            '#type' => 'select',
+            '#required' => TRUE,
+            '#empty_value' => '',
+            '#empty_option' => t('- None -'),
+            '#options' => fr_dataset_field_get_display_type_options(),
+            '#default_value' => $display_type_value,
+            '#ajax' => array(
+              'callback' => 'fr_dataset_field_display_type_ajax_callback',
+              'wrapper' => 'display-settings-fieldset-wrapper',
+            ),
+          );
+          // Display settings.
+          $element['display_settings'] = array(
+            '#prefix' => '<div id="display-settings-fieldset-wrapper">',
+            '#suffix' => '</div>',
+          );
+          if (isset($submitted_values['display_type']) || $display_type_value) {
+            $display_types = fr_dataset_field_get_display_types();
+            $display_type = isset($submitted_values['display_type']) ? $submitted_values['display_type'] : $display_type_value;
+            if (isset($display_types[$display_type]['settings_form'])) {
+              $function = $display_types[$display_type]['settings_form'];
+              if (is_callable($function)) {
+                $element['display_settings'] += array(
+                  '#tree' => TRUE,
+                  '#title' => t('Display settings for @display-type', array('@display-type' => lcfirst($display_types[$display_type]['name']))),
+                  '#type' => 'fieldset',
+                );
+                $element['display_settings'] += $function($form, $form_state, $submitted_values, $display_settings_value, $items[$delta], $delta);
+              }
+            }
+          }
+        }
+
+        return $element;
+      }
+      catch (Exception $e) {
+        watchdog_exception('fr_dataset_field', $e);
+      }
+      break;
+  }
+}
+
+/**
+ * Change text of button to remove filter.
+ */
+function fr_dataset_field_submit_button_pre_render($element) {
+  if (isset($element['#title'])) {
+    $element['#value'] = $element['#title'];
+  }
+  return $element;
+}
+
+/**
+ * Theme function for fields table.
+ */
+function theme_dataset_fields_table($variables) {
+  $form = $variables['item'];
+
+  drupal_add_tabledrag('dataset-fields', 'order', 'sibling', 'menu-weight');
+
+  $header = array(
+    t('Field name (check to enable)'),
+    t('Field label (leave empty to use field name)'),
+    t('Weight'),
+  );
+
+  $rows = array();
+  foreach (element_children($form) as $field) {
+    if (isset($form[$field]['enabled'])) {
+      $element = &$form[$field];
+
+      // Add special classes to be used for tabledrag.js.
+      $element['weight']['#attributes']['class'] = array('menu-weight');
+
+      $row = array();
+      $row[] = array('data' => drupal_render($element['enabled']), 'class' => array('field-enabled'));
+      $row[] = drupal_render($element['label']);
+      $row[] = drupal_render($element['weight']);
+
+      $row = array_merge(array('data' => $row), $element['#attributes']);
+      $row['class'][] = 'draggable';
+      $rows[] = $row;
+    }
+  }
+  $output = theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => array('id' => 'dataset-fields')));
+  $output .= drupal_render_children($form);
+  return $output;
+}
+
+/**
+ * Theme function for filters table.
+ */
+function theme_dataset_filters_table($variables) {
+  $form = $variables['item'];
+
+  $header = array(
+    array('data' => t('Field'), 'class' => array('filter-field')),
+    array('data' => t('Operator'), 'class' => array('filter-operator')),
+    array('data' => t('Value'), 'class' => array('filter-value')),
+    array('data' => t('Exposed'), 'class' => array('filter-exposed')),
+    array('data' => t('Remove'), 'class' => array('filter-remove')),
+  );
+
+  $rows = array();
+  foreach (element_children($form) as $field) {
+    if (isset($form[$field]['field'])) {
+      $element = &$form[$field];
+
+      $row = array();
+      $row[] = array('data' => drupal_render($element['field']), 'class' => array('filter-field'));
+      $row[] = array('data' => drupal_render($element['operator']), 'class' => array('filter-operator'));
+      $row[] = array('data' => drupal_render($element['value_type']) . drupal_render($element['value']), 'class' => array('filter-value'));
+      $row[] = array('data' => drupal_render($element['exposed']), 'class' => array('filter-exposed'));
+      $row[] = drupal_render($element['remove']);
+
+      $row = array_merge(array('data' => $row), $element['#attributes']);
+      $rows[] = $row;
+    }
+  }
+  $output = theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => array('id' => 'dataset-filters')));
+  $output .= drupal_render_children($form);
+  return $output;
+}
+
+/**
+ * Ajax callback for dataset view select field.
+ */
+function fr_dataset_field_dataset_ajax_callback($form, &$form_state) {
+  // Get name of field and return its form element.
+  $element = $form_state['triggering_element'];
+  return $form[$element['#parents'][0]];
+}
+
+/**
+ * Ajax callback for filters.
+ */
+function fr_dataset_field_filters_ajax_callback($form, &$form_state) {
+  $parents = $form_state['triggering_element']['#parents'];
+  return $form[$parents[0]][$parents[1]][$parents[2]][$parents[3]];
+}
+
+/**
+ * Submit handler for the "Remove filter" button.
+ * Decrements the filters counter and causes a form rebuild.
+ */
+function fr_dataset_field_form_remove_submit_callback($form, &$form_state) {
+  if (isset($form_state['triggering_element']['#row_id']) && isset($form_state['original_filters'][$form_state['triggering_element']['#row_id']])) {
+    unset($form_state['original_filters'][$form_state['triggering_element']['#row_id']]);
+    $form_state['filters_count']--;
+    $form_state['rebuild'] = TRUE;
+  }
+}
+
+/**
+ * Submit handler for the "Add filter" button.
+ * Increments the filters counter and causes a form rebuild.
+ */
+function fr_dataset_field_form_add_submit_callback($form, &$form_state) {
+  $form_state['original_filters'][] = array(
+    'field' => NULL,
+    'operator' => NULL,
+    'value_type' => NULL,
+    'value' => NULL,
+    'exposed' => FALSE,
+  );
+  $form_state['filters_count']++;
+  $form_state['rebuild'] = TRUE;
+}
+
+/**
+ * Ajax callback executed when user selects field to be displayed.
+ * This reload display settings.
+ */
+function fr_dataset_field_display_type_ajax_callback($form, &$form_state) {
+  $parents = $form_state['triggering_element']['#parents'];
+  return $form[$parents[0]][$parents[1]][$parents[2]]['display_settings'];
+}
+
+/**
+ * Implements hook_field_presave().
+ */
+function fr_dataset_field_field_presave($entity_type, $entity, $field, $instance, $langcode, &$items) {
+  if ($field['type'] === 'dataset') {
+    // Parse and serialize data before saving to DB.
+    foreach ($items as $delta => $item) {
+      // Serialize data for each item before saving it to database.
+      $items[$delta]['fields'] = serialize(fr_dataset_field_parse_fields($item['fields'], FALSE));
+      $items[$delta]['display_settings'] = serialize(isset($item['display_settings']) ? $item['display_settings'] : array());
+
+      $filters = array();
+      if (isset($item['filters']['table'])) {
+        foreach ($item['filters']['table'] as $filter) {
+          unset($filter['remove']);
+          $filters[] = $filter;
+        }
+      }
+      $items[$delta]['filters'] = serialize($filters);
+    }
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Formatter.
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Implements hook_field_formatter_info().
+ *
+ * @see fr_dataset_field_field_formatter_view()
+ */
+function fr_dataset_field_field_formatter_info() {
+  return array(
+    // This formatter displays data in charts or in a table.
+    'dataset_visualization' => array(
+      'label' => t('Data visualisation'),
+      'field types' => array('dataset'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_formatter_view().
+ *
+ * @see fr_dataset_field_field_formatter_info()
+ */
+function fr_dataset_field_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+  $element = array();
+
+  switch ($display['type']) {
+    // This formatter displays data in charts or in a table.
+    case 'dataset_visualization':
+      foreach ($items as $delta => $item) {
+        // Prepare for preview.
+        if (!empty($entity->in_preview)) {
+          $fields_parsed = array();
+          foreach ($item['fields'] as $field_key => $field) {
+            list(, $field_name) = explode(':', $field_key);
+            $fields_parsed[$field_name] = $field;
+          }
+          $item['fields'] = $fields_parsed;
+
+          $filters_parsed = array();
+          foreach ($item['filters']['table'] as $filter) {
+            $filters_parsed[] = $filter;
+          }
+          $item['filters'] = $filters_parsed;
+        }
+        // Display saved field.
+        else {
+          $item['fields'] = unserialize($item['fields']);
+          $item['filters'] = unserialize($item['filters']);
+          $item['display_settings'] = unserialize($item['display_settings']);
+        }
+
+        $item['container_id'] = $entity_type . '-' . entity_id($entity_type, $entity) . '-' . $field['field_name'] . '-' . $delta;
+
+        $element[$delta] = drupal_get_form('fr_dataset_field_field_formatter_view_display_form', $item);
+      }
+      break;
+  }
+
+  return $element;
+}
+
+/**
+ * Filters form for dataset formatter.
+ */
+function fr_dataset_field_field_formatter_view_display_form($form, &$form_state, $item) {
+  $dataset = $item['dataset'];
+  $fields_value = $item['fields'];
+  $filters = $item['filters'];
+
+  // Get field structure.
+  $client = new DataSetServiceClient();
+  $field_definitions = $client->getStructureAssoc($dataset);
+
+  // Refresh chart.
+  if (isset($form_state['values'])) {
+    foreach ($filters as $i => $filter) {
+      if (isset($form_state['values']["filter_$i"])) {
+        $filters[$i]['value'] = $form_state['values']["filter_$i"];
+      }
+    }
+  }
+
+  $original_filters = $filters;
+
+  // Apply tokens.
+  $token_info = fr_dataset_field_get_tokens();
+  foreach ($filters as $i => $filter) {
+    if ($filter['value_type'] == 'token' && !empty($token_info[$filter['value']]['value_callback']) && is_callable($token_info[$filter['value']]['value_callback'])) {
+      $filters[$i]['value'] = call_user_func($token_info[$filter['value']]['value_callback'], $filter, $field_definitions[$filter['field']]);
+    }
+  }
+
+  try {
+    $data = DataSetServiceClient::export($dataset, $fields_value, $filters);
+  }
+  catch (Exception $e) {
+    watchdog_exception('fr_dataset_field', $e);
+    $data = array();
+  }
+
+  // Alter data by display plugins.
+  $display_types = fr_dataset_field_get_display_types();
+  if (isset($display_types[$item['display_type']])) {
+    $display_type_info = $display_types[$item['display_type']];
+    if (isset($display_type_info['data_alter_callback']) && is_callable($display_type_info['data_alter_callback'])) {
+      $data = call_user_func($display_type_info['data_alter_callback'], $display_type_info, $item, $data);
+    }
+  }
+
+  if (!isset($form_state['container_id'])) {
+    $form_state['container_id'] = drupal_html_id('dataset-visualisation-' . $item['container_id']);
+  }
+
+  $container_id = $form_state['container_id'];
+
+  $form['display'] = array(
+    '#weight' => 100,
+    '#theme' => 'dataset_visualisation',
+    '#is_empty' => empty($data),
+    '#data' => check_plain(drupal_json_encode($data)),
+    '#container_id' => $container_id,
+    '#display_type' => drupal_html_class($item['display_type']),
+    '#prefix' => '<div id="' . $container_id . '-wrapper">',
+    '#suffix' => '</div>',
+  );
+
+  $js_setting = array(
+    'item' => $item,
+    'container_id' => $container_id,
+  );
+
+  // Attach JS files and data.
+  $form['display']['#attached'] = array(
+    'library' => array(
+      array('fr_dataset_field', 'dataset_visualization'),
+    ),
+    'js' => array(
+      array('data' => array('fr_dataset_field' => array('datasetVisualisation' => array($js_setting))), 'type' => 'setting'),
+    ),
+  );
+
+  $field_types = fr_dataset_field_get_data_types();
+
+  // Create form with filters.
+  $form['filters'] = array();
+  foreach ($original_filters as $i => $filter) {
+    if (!empty($filter['exposed']) && !empty($field_definitions[$filter['field']]['type'])) {
+      $field_definition = $field_definitions[$filter['field']];
+      $field_type = $field_definition['type'];
+      $field_label = !empty($fields_value[$filter['field']]['label']) ? $fields_value[$filter['field']]['label'] : $filter['field'];
+      $callback = $field_types[$field_type]['operators'][$filter['operator']]['element_callback'];
+      $operator_name = $field_types[$field_type]['operators'][$filter['operator']]['name'];
+      $element_title = t('@field @operator', array('@field' => $field_label, '@operator' => strtolower($operator_name)));
+
+      // Get token options.
+      if ($filter['value_type'] == 'token') {
+        $token_options = fr_dataset_field_get_token_options($field_type, $filter['operator']);
+      }
+      else {
+        $token_options = array();
+      }
+
+      if (!empty($token_options)) {
+        $form['filters']["filter_$i"] = array(
+          '#title' => $element_title,
+          '#title_display' => 'before',
+          '#type' => 'select',
+          '#options' => $token_options,
+          '#default_value' => $filter['value'],
+        );
+      }
+      elseif (is_callable($callback)) {
+        $form['filters']["filter_$i"] = array(
+            '#title' => $element_title,
+            '#required' => FALSE,
+            '#title_display' => 'before',
+          ) + $callback($filter['value']);
+      }
+    }
+  }
+
+  if (!empty($form['filters'])) {
+    $form['filters'] += array(
+      '#type' => 'fieldset',
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      '#title' => t('Filters'),
+      '#attributes' => array('class' => array('fieldset-filters')),
+    );
+
+    $form['#attributes'] = array(
+      'id' => "dataset-exposed-filters-form-$container_id",
+      'class' => 'dataset-exposed-filters-form',
+    );
+
+    $form['filters']['buttons'] = array(
+      '#type' => 'container',
+      '#attributes' => array('class' => array('form-buttons')),
+    );
+    $form['filters']['actions']['submit'] = array(
+      '#type' => 'button',
+      '#value' => t('Apply'),
+      '#ajax' => array(
+        'callback' => 'fr_dataset_field_display_ajax_callback',
+        'wrapper' => $container_id . '-wrapper',
+        'progress' => array('type' => 'none'),
+        'effect' => 'fade',
+        'method' => 'replace',
+      ),
+      '#attributes' => array('class' => array('button-apply', 'button-primary')),
+    );
+    $form['filters']['actions']['reset'] = array(
+      '#type' => 'button',
+      '#value' => t('Reset'),
+      '#element_validate' => array('fr_dataset_field_display_reset_validate'),
+      '#limit_validation_errors' => array(),
+      '#ajax' => array(
+        'callback' => 'fr_dataset_field_display_reset_ajax_callback',
+        'wrapper' => "dataset-exposed-filters-form-$container_id",
+        'progress' => array('type' => 'none'),
+        'effect' => 'fade',
+      ),
+      '#attributes' => array('class' => array('button-reset')),
+    );
+  }
+
+
+  // Used for refresh reports.
+  $interval = isset($item['display_settings']['refresh_interval']) && $item['display_settings']['refresh_interval'] > 0 ? $item['display_settings']['refresh_interval'] * 1000 : 0;
+
+  $form['refresh'] = array(
+    '#type' => 'button',
+    '#value' => t('Refresh'),
+    '#ajax' => array(
+      'callback' => 'fr_dataset_field_display_ajax_callback',
+      'wrapper' => $container_id,
+      'progress' => array('type' => 'none'),
+      'effect' => 'none',
+      'method' => 'html',
+    ),
+    '#attributes' => array(
+      'class' => array('button-refresh', 'button-autoclick'),
+      'data-interval' => $interval,
+    ),
+  );
+
+  return $form;
+}
+
+/**
+ * Ajax callback for dataset view select field.
+ */
+function fr_dataset_field_display_ajax_callback($form, &$form_state) {
+  return $form['display'];
+}
+
+/**
+ * Ajax callback for dataset view select field.
+ */
+function fr_dataset_field_display_reset_ajax_callback($form, &$form_state) {
+  return $form;
+}
+
+/**
+ * Ajax callback for exposed filters reset button.
+ */
+function fr_dataset_field_display_reset_validate($element, &$form_state, $form) {
+  $form_state['input'] = array();
+}
+
+/**
+ * Implements hook_theme().
+ */
+function fr_dataset_field_theme($existing, $type, $theme, $path) {
+  return array(
+    'dataset_visualisation' => array(
+      'template' => 'dataset-visualisation',
+      'path' => drupal_get_path('module', 'fr_dataset_field').'/templates',
+      'variables' => array('data' => array(), 'container_id' => NULL, 'is_empty' => TRUE, 'display_type' => NULL),
+    ),
+    'dataset_fields_table' => array(
+      'render element' => 'item',
+    ),
+    'dataset_filters_table' => array(
+      'render element' => 'item',
+    ),
+    'dataset_table_icons_mapping' => array(
+      'render element' => 'item',
+    ),
+  );
+}
+
+/**
+ * Implements hook_library().
+ */
+function fr_dataset_field_library() {
+  $path = drupal_get_path('module', 'fr_dataset_field');
+
+  $library['visualization'] = array(
+    'title' => t('Google Visualization library'),
+    'website' => 'https://google-developers.appspot.com/chart/',
+    'version' => '1.0',
+    'js' => array(
+      array('data' => '//www.google.com/jsapi', 'type' => 'external', 'weight' => -10),
+    ),
+  );
+
+  $library['dataset_visualization'] = array(
+    'title' => t('Google Charts integration'),
+    'version' => '1.0',
+    'css' => array(
+      "$path/css/fr_dataset_field.css",
+    ),
+    'js' => array(
+      array('data' => "$path/js/common.js", 'weight' => 1, 'type' => 'file'),
+      array('data' => "$path/js/chart_wrapper.js", 'weight' => 1, 'type' => 'file'),
+      array('data' => "$path/js/display_types/table.js", 'weight' => 2, 'type' => 'file'),
+      array('data' => "$path/js/display_types/bar_chart.js", 'weight' => 3, 'type' => 'file'),
+      array('data' => "$path/js/display_types/line_chart.js", 'weight' => 4, 'type' => 'file'),
+      array('data' => "$path/js/display_types/pie_chart.js", 'weight' => 5, 'type' => 'file'),
+      array('data' => "$path/js/display_types/gauge.js", 'weight' => 6, 'type' => 'file'),
+    ),
+    'dependencies' => array(
+      array('fr_dataset_field', 'visualization'),
+    ),
+  );
+
+  return $library;
+}

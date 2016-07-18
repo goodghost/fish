@@ -1,0 +1,16 @@
+<?php
+
+/**
+ * @file
+ *
+ * Good practice example file for defining module files
+ */
+
+/**
+ * Implements hook_menu().
+ *
+ * @return array
+ */
+function good_module_example_menu() {
+  return array();
+}

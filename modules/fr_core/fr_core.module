@@ -1,0 +1,130 @@
+<?php
+
+include_once 'fr_core.features.inc';
+
+
+/**
+ * Implements hook_menu().
+ */
+function fr_core_menu() {
+  $items = array();
+
+  $items['language-test-page'] = array(
+    'title' => 'Language test page',
+    'page callback' => 'fr_core_language_test_page',
+    'access arguments' => array('access content'),
+  );
+
+  return $items;
+}
+
+/**
+ * This function is used for demo language purposes only.
+ */
+function fr_core_language_test_page() {
+  $output = '';
+  $output = t('I would like to go to the cinema this evening.');
+  return $output;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function fr_core_theme($existing, $type, $theme, $path) {
+  return array(
+    'definition_list' => array(
+      'variables' => array('items' => array(), 'title' => NULL, 'attributes' => array()),
+    ),
+  );
+}
+
+/**
+ * Returns definition list (DL) for a list or nested list of items.
+ *
+ * @see theme_item_list()
+ *
+ * @param $variables
+ *   An associative array containing:
+ *   - items: An associative array of items to be displayed in the list. If an item is a
+ *     string, then it is used as is. If an item is an array, then the "data"
+ *     element of the array is used as the contents of the list item. If an item
+ *     is an array with a "children" element, those children are displayed in a
+ *     nested list. All other elements are treated as attributes of the list
+ *     item element.
+ *   - title: The title of the list.
+ *   - attributes: The attributes applied to the list element.
+ *
+ * @return string
+ */
+function theme_definition_list($variables) {
+  $items = $variables['items'];
+  $output = '';
+
+  if (isset($title) && $title !== '') {
+    $output .= '<h3>' . $title . '</h3>';
+  }
+
+  if (!empty($items)) {
+    $i = 0;
+    $output .= '<div class="definition-list">';
+    foreach ($items as $item_key => $item_value) {
+      $i++;
+      if (is_array($item_value)) {
+        $output .= '<div class="row"><label>'.$item_key.':</label>';
+        foreach ($item_value as $key => $value) {
+          if ($key == 'data') {
+          }
+          elseif ($key == 'children') {
+          }
+          else {
+            $output .= '<div class="row"><label>'.$key.':</label><div class="definition-list-data">'.$value.'</div></div>';
+          }
+        }
+        $output .= '</div>';
+      }
+      else {
+        $output .= '<div class="row"><label>'.$item_key.':</label><div class="definition-list-data">'.$item_value.'</div></div>';
+      }
+    }
+    $output .= '</div>';
+  }
+  return $output;
+}
+
+/**
+ * Returns only content part of page for delivery callback function.
+ */
+function fr_content_delivery_callback($page_callback_result) {
+  if (isset($page_callback_result) && is_null(drupal_get_http_header('Content-Type'))) {
+    drupal_add_http_header('Content-Type', 'text/html; charset=utf-8');
+  }
+
+  // Send appropriate HTTP-Header for browsers and search engines.
+  global $language;
+  drupal_add_http_header('Content-Language', $language->language);
+
+  // Menu status constants are integers; page content is a string or array.
+  if (is_int($page_callback_result)) {
+    switch ($page_callback_result) {
+      case MENU_NOT_FOUND:
+        drupal_add_http_header('Status', '404 Not Found');
+        print t('Page not found');
+        break;
+
+      case MENU_ACCESS_DENIED:
+        drupal_add_http_header('Status', '403 Forbidden');
+        print t('Access denied');
+        break;
+
+      case MENU_SITE_OFFLINE:
+        print t('Site under maintenance');
+        break;
+    }
+  }
+  elseif (isset($page_callback_result)) {
+    $html = is_string($page_callback_result) ? $page_callback_result : drupal_render($page_callback_result);
+    print $html;
+    // Perform end-of-request tasks.
+    drupal_page_footer();
+  }
+}

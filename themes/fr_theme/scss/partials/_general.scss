@@ -1,0 +1,63 @@
+/* Fonts */
+
+@font-face {
+  font-family: $fi;
+  src: url("../fonts/flaticon.eot");
+  src: url("../fonts/flaticon.eot#iefix") format("embedded-opentype"),
+  url("../fonts/flaticon.woff") format("woff"),
+  url("../fonts/flaticon.ttf") format("truetype"),
+  url("../fonts/flaticon.svg") format("svg");
+  font-weight: normal;
+  font-style: normal;
+}
+
+.preview {
+  h3 {
+    text-transform: uppercase;
+    font-weight: 300;
+    font-size: 1.6em;
+    margin-bottom: 20px;
+  }
+  .node {
+    background: $gray-base;
+    margin-bottom: 50px;
+  }
+}
+
+fieldset.features-export-component.collapsed {
+  background: lighten($gray-base, 5%);
+}
+
+fieldset.features-export-component {
+  background: lighten($gray-base, 8%);
+}
+
+div.features-export-list {
+  border: none;
+}
+
+input.form-submit#edit-submit {
+  color: $white;
+}
+
+table.features-diff td.diff-addedline,
+table.features-diff td.diff-deletedline {
+  background: transparent;
+}
+
+#features-export-wrapper .component-added .form-type-checkbox,
+a.admin-overridden:link, 
+a.admin-overridden:visited, 
+span.admin-overridden {
+  background: $blue;
+  color: $white;
+}
+
+a.admin-update, 
+a.features-storage, 
+span.features-storage, 
+span.features-component-list span {
+  background: lighten($gray-base, 5%);
+}
+
+

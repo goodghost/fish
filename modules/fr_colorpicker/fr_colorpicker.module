@@ -1,0 +1,71 @@
+<?php
+
+/**
+ * @file
+ * FR Colorpicker primary module file.
+ */
+
+/**
+ * Implements hook_elements().
+ */
+function fr_colorpicker_element_info() {
+  // This is the definition for the new form API element.
+  return array(
+    'colorpicker' => array(
+      '#input' => TRUE,
+      '#element_validate' => array('fr_colorpicker_validate'),
+      '#theme' => 'colorpicker',
+    ),
+  );
+}
+
+/**
+ * Implements hook_theme().
+ */
+function fr_colorpicker_theme() {
+  return array(
+    'colorpicker' => array(
+      'render element' => 'element',
+    ),
+  );
+}
+
+/**
+ * Theme function for colorpicker element.
+ */
+function theme_colorpicker($variables) {
+  $path = drupal_get_path('module', 'fr_colorpicker');
+  $element = $variables['element'];
+  unset($element['#theme'], $element['#defaults_loaded']);
+  $picker_id = drupal_html_id('colorpicker-picker');
+  $element = array(
+    '#type' => 'textfield',
+    '#size' => 7,
+    '#maxlength' => 7,
+    '#suffix' => '<div class="colorpicker-picker" id="' . $picker_id . '"></div>',
+    '#attributes' => array(
+      'class' => array('form-colorpicker'),
+      'data-picker' => $picker_id,
+      'placeholder' => t('- Pick -'),
+    ),
+    '#attached' => array(
+      'library' => array(
+        array('system', 'farbtastic'),
+        array('system', 'ui.position'),
+      ),
+      'js' => array("$path/js/fr_colorpicker.js"),
+      'css' => array("$path/css/fr_colorpicker.css"),
+    ),
+  ) + $element;
+
+  return drupal_render($element);
+}
+
+/**
+ * Validation function colorpicker element.
+ */
+function fr_colorpicker_validate($element, &$form_state) {
+  if ($element['#value'] && !preg_match('@^#[0-9a-f]{6}$@i', $element['#value'])) {
+    form_error($element, t('Color must be a hexadecimal value (eg: #84CCAF).'));
+  }
+}

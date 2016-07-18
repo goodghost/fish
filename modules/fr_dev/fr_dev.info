@@ -1,0 +1,16 @@
+name = FR Dev
+description = Functionality related to development process.
+package = Fish Reporting
+core = 7.x
+version = 7.x-1.0
+
+; Core and Contrib modules
+dependencies[] = coffee
+dependencies[] = dblog
+dependencies[] = devel
+dependencies[] = devel_generate
+dependencies[] = field_ui
+dependencies[] = migrate_ui
+dependencies[] = menu
+dependencies[] = search_krumo
+dependencies[] = views_ui

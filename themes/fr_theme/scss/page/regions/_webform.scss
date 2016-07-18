@@ -1,0 +1,181 @@
+/* Styles for webforms */
+
+.webform-fish-api {
+  &.view-page { 
+    input {
+      border: none;
+      padding: 0;
+    }
+    input.no-confirmation,
+    input.confirmation {
+      padding: 15px;
+    }
+    select.form-select {
+      border: none;
+      background-image: none;
+      background-color: transparent;
+      padding: 0;
+      color: $disabled-item;
+    }
+    select[disabled] {
+      opacity: 0.5 !important;
+    }
+    input.webform-calendar {
+      display: none;
+    }
+    .form-disabled {
+      input.form-text {
+        background: transparent;
+        color: $disabled-item;
+      }
+    }
+  }
+  input[disabled]{
+    border: none;
+    padding: 0;
+  }
+  input.button-primary {
+    @include button;
+    padding: 15px;
+    border: none;
+    &:active,
+    &:focus {
+      @include button;
+      padding: 15px;
+    }
+  }
+
+  .description {
+    display: none;
+  }
+
+  .fa-question-circle::before {
+    float: left;
+  }
+
+  .question-mark {
+    position: relative;
+    span {
+      display: none;
+      position: absolute;
+      width: 250px;
+      margin-left: 20px;
+      background-color: $white;
+      padding: 5px;
+      border: 1px solid $blue;
+      color: $gray-base;
+      font-family: $os;
+    }
+  }
+  .button-reset,
+  .button-cancel {
+    display: none;
+  }
+
+  &.webform-fish-api-add-new-item,
+  &.webform-fish-api-edit-item, {
+    .form-actions {
+      .webform-submit {
+        float: left;
+      }
+      .button-reset,
+      .button-cancel {
+        @include button;
+        float: right;
+        padding: 12px 17px 12px 15px;
+        position: relative;
+        top: 2px;
+        margin-left: 10px;
+        cursor: pointer;
+      }
+    }
+  }
+
+  /* Hide "Clone" and "Delete" from "Operations" */
+  .webform-component-clone,
+  .webform-component-delete {
+    display: none;
+  }
+} 
+.navbar-icon-webform:before {
+  content: "\f044" !important;
+}
+
+/* Styling for Delete link for unrequired fields */
+.delete-component {
+  @include button;
+  float: right;
+  padding: 15px;
+  background-color: $red;
+  &:hover {
+    text-decoration: none;
+    background-color: $red-light;
+  }
+}
+
+.page-node-add-webform {
+  #object-list,
+  .form-item-fr-form-operations {
+    select {
+      min-width: 508px;
+    }
+  }
+}
+
+/* Custom confirm window */
+.ui-dialog, .ui-dialog .ui-dialog-titlebar {
+  background-color: $gray-base;
+  border: none;
+  
+}
+
+.no-close .ui-dialog-titlebar-close, #dialog-confirm {
+  display: none;
+}
+
+.ui-dialog .ui-dialog-buttonpane {
+  border: none;
+  button {
+    border: none;
+    border-radius: 2px;
+    color: $white;
+    background-color: $blue;
+    background-image: none;
+    &:hover {
+      background-color: $blue-light;
+    }
+  }
+  button:last-child {
+    color: $blue;
+    background: none;
+    &:hover {
+      color: $blue-light;
+    }
+  }
+  .ui-dialog-buttonset {
+    float: none;
+    margin-left: 20%;
+  }
+}
+
+.ui-dialog .ui-dialog-content {
+  font-family: $os;
+  text-transform: uppercase;
+  font-size: 1.3em;
+  color: $white;
+  text-align: center;
+}
+
+#webform-component-edit-form {
+  .form-actions.form-wrapper {
+    float: left;
+  }
+}
+
+#webform-node-form {
+  #field-actions-values {
+    input.form-submit {
+      display: none;
+    }
+  }
+}

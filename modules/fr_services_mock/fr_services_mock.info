@@ -1,0 +1,9 @@
+name = FR Services Mock
+description = Provides mocks for API server.
+core = 7.x
+package = Fish Reporting
+version = 7.x-1.0
+project = fr_services_mock
+dependencies[] = date_popup
+dependencies[] = features
+dependencies[] = fr_services

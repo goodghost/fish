@@ -1,0 +1,30 @@
+<?php
+
+function fr_http_client_tests_menu() {
+  $items = array();
+
+  $items['http-client-tests'] = array(
+    'title' => 'Dupa',
+    'page callback' => 'fr_http_client_tests_page_view',
+    'access arguments' => array('access content'),
+  );
+
+  return $items;
+}
+
+function fr_http_client_tests_page_view() {
+  try {
+    $client = new HttpClient();
+    $url = variable_get('fr_services_jsontest', 'http://ip.jsontest.com/');
+    $data = $client->get($url);
+    dsm($data);
+    return 'ok';
+  }
+  catch (Exception $e) {
+    watchdog_exception('fr_case', $e);
+    return $e->getMessage();
+    return 'bad';
+  }
+
+  
+}

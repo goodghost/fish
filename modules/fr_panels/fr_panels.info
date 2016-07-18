@@ -1,0 +1,14 @@
+name = FR Panels
+description = Customizations related to Panels module. Based on node_pane module.
+core = 7.x
+package = Fish Reporting
+dependencies[] = features
+dependencies[] = panelizer
+dependencies[] = strongarm
+features[ctools][] = strongarm:strongarm:1
+features[ctools][] = views:views_default:3.0
+features[features_api][] = api:2
+features[variable][] = page_manager_node_view_disabled
+features[variable][] = panels_renderer_default
+features[views_view][] = node_pane_selection_report
+features_exclude[dependencies][views] = views

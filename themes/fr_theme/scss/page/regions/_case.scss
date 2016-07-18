@@ -1,0 +1,890 @@
+//Styles for cases
+.case-information {
+  width: 25%;
+  float: left;
+  margin-right: 15px;
+  h3 {
+    font-weight: 400;
+    @include icon_before('\f05a');
+  }
+  table {
+    border-top: 3px solid $blue;
+    td:first-child {
+      text-align: right;
+      &.evidence-volume,
+      &.case-generation-date,
+      &.case-creator {
+        @include icon_after('\f059', darken($text-default, 40%), 5px, 1em);
+      }
+    }
+  }
+}
+
+.case-scenes {
+  width: calc(75% - 15px);
+  float: right;
+  h3 {
+    font-weight: 400;
+    @include icon_before('\f030');
+  }
+  .inner {
+    background: lighten($gray-base, 2%);
+    padding: 40px;
+    float: left;
+    width: 100%;
+    a.case-scene {
+      display: block; 
+      width: 164px;
+      height: 164px;
+      margin: 0 10px 10px 0;
+      position: relative;
+      float: left;
+      background: $gray-base;
+      &:hover {
+        border: 2px solid $blue;
+        .case-scene--name {
+          background: $blue;
+          color: $text-default;
+          bottom: -2px;
+        }
+      }
+      img {
+        position: absolute;
+        margin: auto;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+      }
+      .case-scene--name {
+        position: absolute;
+        bottom: 0;
+        z-index: 1;
+        text-align: center;
+        background: $gray-base;
+        opacity: 0.9;
+        width: 100%;
+        padding: 5px 0;
+      }
+    }
+  }
+}
+
+.page-cases-scenes {
+  /* scene page */
+  #fr-case-scene-dockets-form {
+    fieldset {
+      .fieldset-legend {
+        background: none;
+        @include icon_before('\f0d7', lighten($gray-base, 10%), 7px, 0.8em);
+      }
+      &.collapsed {
+        .fieldset-legend {
+          width: 100%;
+          border-bottom: 1px solid lighten($gray-base, 5%);
+          background: none;
+          @include icon_before('\f0da', lighten($gray-base, 10%), 7px, 0.8em);
+        }
+      }
+    }
+    .form-item-user,
+    .form-item-docket {
+      float: left;
+      margin-right: 15px;
+      min-width: 15%;
+      #edit-user,
+      #edit-docket {
+        background: lighten($gray-base, 4%);
+        padding: 5px 15px;
+        margin-top: 5px;
+        .form-item-user,
+        .form-item-docket {
+          float: none;
+          margin-bottom: 5px;
+          margin-top: 5px;
+        }
+      }
+    }
+    .form-item-switch-scene {
+      float: left;
+      margin-top: 22px;
+      select#edit-switch-scene {
+        min-width: 230px;
+        min-height: 37px;
+        margin-top: 5px;
+      }
+    }
+    #edit-actions {
+      @include clearfix();
+      padding-top: 0;
+      text-align: right;
+      #edit-slideshow {
+        float: right;
+        margin-top: 10px;
+        cursor: pointer;
+        @include button('\f144', false, $blue, $white, $fa);
+        display: block;
+        text-align: left;
+      }
+      #edit-back-to-case {
+        float: right;
+        margin-right: 10px;
+        a {
+          margin-top: 10px;
+          cursor: pointer;
+          @include button('\f137', false, $blue, $white, $fa);
+          display: block;
+          text-align: left;
+          color: $white;
+          text-decoration: none;
+        }
+      }
+      .form-item-switch-scene {
+        label, select {
+          float: left;
+        }
+        label {
+          margin: 10px 10px 0;
+        }
+      }
+    }
+    .case-scene-docket {
+      margin-bottom: 30px;
+    }
+    .case-scene-dockets-counter {
+      float: right;
+      margin: 10px 0;
+    }
+    .scene-docket-infobox {
+      @include clearfix();
+      margin-bottom: 5px;
+      h4.docket-label {
+        @include icon_before('\e000', $link, 7px, 1em, $fi);
+        float: left;
+        font-weight: 500;
+        font-size: 1.3em;
+      }
+      .case-scene-docket-created-by {
+        float: left;
+        margin: 10px 0 10px 15px;
+        font-size: 1.3em;
+        font-weight: 300;
+        &:before {
+          content: " | ";
+          font-weight: 300;
+          color: darken($text-default, 50%);
+          margin-right: 7px;
+        }
+        &:after {
+          content: " | ";
+          font-weight: 300;
+          color: darken($text-default, 50%);
+          margin-left: 7px;
+        }
+      }
+      .order-print {
+        float: left;
+        margin: 10px 0 10px 15px;
+        @include icon_before('\f02f', lighten($gray-base, 30%), 5px, 1.1em);
+        &:hover {
+          text-decoration: none;
+        }
+      }
+    }
+    .docket-images {
+      .tooltip {
+        position: absolute;
+        z-index: 11;
+        width: 100%;
+        background: darken($gray-base, 8%);
+        opacity: 0.9;
+        text-align: center;
+        font-size: 13px;
+        bottom: 100%;
+        span {
+          display: block;
+          font-size: 9px;
+        }
+        @include icon_after('\f0d7', darken($gray-base, 8%), 2px, 1.6em);
+        &:after {
+          position: absolute;
+          bottom: -14px;
+          left: 0;
+          right: 0;
+          text-align: center;
+        }
+      }
+      background: lighten($gray-base, 2%);
+      padding: 17px;
+      @include clearfix();
+      .docket-image {
+        a {
+          text-decoration: none;
+          &.case-scene-thumbnail-video {
+            @include icon_before('\f01d', $white, 0, 2.5em);
+            &:before {
+              position: absolute;
+              text-align: center;
+              top: 49%;
+              z-index: 10;
+              margin: auto;
+              left: 0;
+              right: 0;
+            }
+            img {
+              opacity: 0.4;
+            }
+          }
+        }
+        float: left;
+        width: 160px;
+        height: 160px;
+        display: block;
+        margin: 0 7px 13px 0;
+        background: darken($gray-base, 3%);
+        position: relative;
+
+        .case-scene-thumbnail--sensitive {
+          img {
+            display: none;
+          }
+          span.sensitive {
+            display: block;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            @include icon_before('\e005', $red, 0, 2.8em, $fi);
+            &:before {
+              position: absolute;
+              top: 40%;
+              left: 0;
+              right: 0;
+              bottom: 0;
+              margin: auto;
+              text-align: center;
+            }
+          }
+        }
+        .image-restricted {
+          @include icon_before('\e004', lighten($gray-base, 5%), 0, 2.8em, $fi);
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          margin: auto;
+          &:before {
+            position: absolute;
+            top: 40%;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            margin: auto;
+            text-align: center;
+          }
+        }
+        .image-details {
+          position: absolute;
+          bottom: 0;
+          height: 25px;
+          width: 100%;
+          background: darken($gray-base, 6%);
+          label {
+            margin: 0 0 0 5px;
+            float: left;
+            color: $white;
+          }
+          .restrict {
+            display: block;
+            float: left;
+            @include icon_before('\e005', darken($text-default, 50%), 0, 0.8em, $fi);
+            margin-left: 4px;
+            cursor: pointer;
+            &:hover {
+              &:before {
+                color: darken($text-default, 40%);
+              }
+            }
+          }
+          .lock {
+            display: block;
+            float: left;
+            @include icon_before('\e004', darken($text-default, 50%), 0, 0.8em, $fi);
+            margin-left: 2px;
+            cursor: pointer;
+            &:hover {
+              &:before {
+                color: darken($text-default, 40%);
+              }
+            }
+          }
+          .type {
+            width: 37px;
+            height: 37px;
+            position: absolute;
+            z-index: 10;
+            right: 10px;
+            bottom: 115px;
+            border-radius: 50%;
+            box-shadow: 1px 1px 3px darken($gray-base, 10%);
+          }
+          .type.fingerprint {
+            background: $blue;
+            @include icon_before('\e002', $white, 0, 1.2em, $fi);
+            &:before {
+              margin: 0 0 0 9px;
+              line-height: 35px;
+            }
+          }
+          .type.footwear {
+            background: $green;
+            @include icon_before('\e003', $white, 0, 1.2em, $fi);
+            &:before {
+              margin: 0 0 0 9px;
+              line-height: 35px;
+            }
+          }
+          .type.none {
+            box-shadow: none;
+          }
+        }
+        img {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          margin: auto;
+        }
+        &.accessible {
+          img {
+            display: block;
+          }
+          .case-scene-thumbnail--sensitive {
+            img {
+              display: none;
+            }
+          }
+          .image-restricted {
+            z-index: 10;
+            top: 7px;
+            left: 7px;
+            bottom: auto;
+            right: auto;
+            &:before {
+              font-size: 1em;
+              color: $white;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /* Slideshow */
+  .pswp--ie img,
+  img.pswp__img {
+    width: auto;
+    max-width: 100%;
+  }
+
+  .pswp {
+    background: darken($gray-base, 25%);
+    .pswp__bg {
+      background: darken($gray-base, 12%);
+      width: 99%;
+      height: 98%;
+      left: 0.5%;
+      top: 0.8%;
+      transition: none !important;
+    }
+    .pswp__zoom-wrap {
+      transform: none !important;
+      img {
+        top: 0;
+        left: 0;
+        bottom: 0;
+        right: 0;
+        margin: auto;
+        cursor: default;
+        width: auto !important;
+        height: auto !important;
+      }
+    }
+    .pswp__caption {
+      background: transparent;
+      z-index: 10001;
+      .pswp__caption__center {
+        max-width: none;
+        padding: 5px 20px;
+        .image-info {
+          @include clearfix();
+          margin: 0 0 10px 0;
+          .item.first {
+            float: left;
+          }
+          .item.last {
+            float: right;
+          }
+        }
+        .exif {
+          display: none;
+          .row {
+            label {
+              display: inline;
+            }
+            .definition-list-data {
+              display: inline;
+              padding-left: 8px;
+            }
+            .row {
+              margin: 0 0 0 15px;
+              label {
+                display: inline;
+              }
+              .definition-list-data {
+                display: inline;
+                padding-left: 8px;
+              }
+            }
+          }
+        }
+        .notes {
+          display: none;
+          .row {
+            margin-bottom: 15px;
+            label {
+              display: none;
+            }
+            .row {
+              margin-bottom: 0;
+              label {
+                display: inline;
+              }
+              .definition-list-data {
+                display: inline;
+                padding-left: 8px;
+              }
+            }
+          }
+        }
+        &.info {
+          .exif_notes {
+            overflow: auto;
+            height: 285px;
+          }
+          .image-info {
+            margin-top: -30px;
+          }
+        }
+      }
+      .pswp__caption__center.info {
+        height: 300px;
+        max-width: 99%;
+        background: darken($gray-base, 15%);
+        border-top: 3px solid darken($gray-base, 10%);
+        opacity: 0.99;
+        
+        h4 {
+          color: $white;
+        }
+        .exif {
+          display: block;
+          width: 50%;
+          float: left;
+          li {
+            float: left;
+            width: 33%;
+            color: darken($text-default, 25%);
+            line-height: 1.5em;
+            font-size: 0.9em;
+          }
+        }
+        .notes {
+          display: block;
+          width: 50%;
+          float: right;
+          position: relative;
+          li {
+            color: darken($text-default, 25%);
+          }
+          .close {
+            position: absolute;
+            right: 15px;
+            top: 10px;
+            color: $link;
+            cursor: pointer;
+            @include icon_before('\f05c', darken($text-default, 20%));
+            &:hover {
+              color: lighten($link, 10%);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .pswp__ui--fit .pswp__top-bar {
+    background: transparent;
+  }
+
+  .pswp__top-bar {
+    margin-top: 15px;
+    .pswp__button {
+      background: none;
+      margin: 0 18px;
+      width: auto;
+      color: darken($text-default, 15%);
+    }
+    .pswp__button--exif {
+      float: left;
+      color: $link;
+      margin-right: 0;
+      span {
+        background: url('../images/icons_sprite.png') no-repeat 0 0;
+        display: block;
+        width: 20px;
+        height: 18px;
+        float: left;
+        margin: 3px 5px 0;
+      }
+      div {
+        float: left;
+      }
+    }
+
+    .pswp__button--notes {
+      float: left;
+      color: $link;
+      
+      span {
+        background: url('../images/icons_sprite.png') no-repeat -22px 0;
+        display: block;
+        width: 20px;
+        height: 18px;
+        float: left;
+        margin: 3px 5px 0;
+      }
+    }
+
+    .pswp__button--previous,
+    .pswp__button--next,
+    .navigation-name {
+      float: right;
+      margin: 0;
+    }
+    .navigation-name {
+      margin-right: 5px;
+    }
+    #slideshow-toggle {
+      span {
+        background: url('../images/icons_sprite.png') no-repeat -64px 0;
+        display: block;
+        width: 20px;
+        height: 18px;
+        float: right;
+        margin: 3px 0 0 5px;
+      }
+      &.start {
+        span {
+          background: url('../images/icons_sprite.png') no-repeat -86px 0;
+        }
+      }
+    }
+    .pswp__button--arrow--left {
+      position: static;
+      top: auto;
+      height: 44px;
+      &:before {
+        left: auto;
+        top: auto;
+        background: transparent;
+        height: auto;
+        width: auto;
+        background: url('../images/icons_sprite.png') no-repeat -107px 0;
+        display: block;
+        width: 20px;
+        height: 18px;
+        float: left;
+        margin: 3px 0 0 -10px;
+      }
+    }
+
+    .pswp__button--arrow--right {
+      position: static;
+      top: auto;
+      height: 44px;
+      margin-left: -2px;
+      &:before {
+        left: auto;
+        top: auto;
+        background: transparent;
+        height: auto;
+        width: auto;
+        background: url('../images/icons_sprite.png') no-repeat -129px 0;
+        display: block;
+        width: 20px;
+        height: 18px;
+        float: left;
+        margin: 3px 0 0 -3px;
+        right: auto;
+      }
+    }
+
+    .pswp__button--arrow--first {
+      width: 20px;
+      height: 44px;
+      background: url('../images/icons_sprite.png') no-repeat -191px 0;
+      margin: 3px 0 0 8px;
+    }
+
+    .pswp__button--arrow--last {
+      width: 20px;
+      height: 44px;
+      background: url('../images/icons_sprite.png') no-repeat -171px 0;
+      margin: 3px 0 0 6px;
+    }
+
+    .pswp__button--arrow--right {
+      position: static;
+      top: auto;
+      height: 44px;
+      margin-left: -2px;
+      &:before {
+        left: auto;
+        top: auto;
+        background: transparent;
+        height: auto;
+        width: auto;
+        background: url('../images/icons_sprite.png') no-repeat -129px 0;
+        display: block;
+        width: 20px;
+        height: 18px;
+        float: left;
+        margin: 3px 0 0 -3px;
+        right: auto;
+      }
+    }
+
+    .pswp__button--close {
+      color: $link;
+      margin-right: 20px;
+      font-weight: 600;
+      span {
+        background: url('../images/icons_sprite.png') no-repeat -149px 0;
+        display: block;
+        width: 20px;
+        height: 18px;
+        float: left;
+        margin: 3px 5px 0 0;
+      }
+    }
+
+    .pswp__button--fs {
+      span {
+        background: url('../images/icons_sprite.png') no-repeat -45px 0;
+        display: block;
+        width: 20px;
+        height: 18px;
+        float: right;
+        margin: 3px 0 0 5px;
+      }
+    }
+
+    .pswp__counter {
+      left: auto;
+      top: auto;
+      float: left;
+      padding: 0;
+      height: auto;
+      line-height: normal;
+      position: static;
+      min-width: 55px;
+      font-size: 1em;
+      line-height: 24px;
+      margin-left: 25px;
+    }
+
+    .pswp__button--share {
+      margin: 0;
+    }
+
+    .navigation-name {
+      cursor: text;
+      margin: 0;
+    }
+  }
+}
+
+.video-container {
+  z-index: 10000;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  margin: auto;
+  position: fixed;
+  width: 800px;
+  max-height: 400px;
+  max-width: 100%;
+  .mejs-overlay-loading {
+    background: none;
+  }
+}
+
+/* Cases management */
+.page-user-work-assignment {
+  .dashboard-column {
+    margin-bottom: 100px;
+    h4 {
+      font-weight: 500;
+      font-size: 1.5em;
+      color: $white;
+    }
+    .ui-state-highlight {
+      background: $blue;
+      border: none;
+    }
+    .ui-state-active {
+      background: lighten($blue, 5%);
+      font-weight: normal;
+    }
+    .dashboard-column-droppable {
+      padding: 10px;
+    }
+  }
+  .dashboard-card {
+    @include clearfix();
+    background: lighten($gray-base, 3%);
+    border: 1px solid lighten($gray-base, 3%);
+    padding: 10px 25px;
+    margin: 0 0 1em 0;
+    @-webkit-keyframes show-box-shadow {
+      0% {
+        box-shadow: none;
+      }
+      100% {
+        box-shadow: 5px 5px 25px darken($gray-base, 10%);
+      }
+    }
+
+    @keyframes show-box-shadow {
+      0% {
+        box-shadow: none;
+      }
+      100% {
+        box-shadow: 5px 5px 25px darken($gray-base, 10%);
+      }
+    }
+
+    &.selected {
+      border: 1px dashed lighten($gray-base, 13%);
+      -webkit-animation: show-box-shadow ease-in-out 0.15s forwards;
+      animation: show-box-shadow ease-in-out 0.15s forwards;
+      z-index: 10;
+    }
+    .left {
+      float: left;
+    }
+    .right {
+      float: right;
+    }
+    .item {
+      color: darken($text-default, 10%);
+      strong {
+        color: $white;
+      }
+    }
+    .category {
+      float: left;
+      margin-right: 10px;
+      border: 4px solid $blue;
+      border-style: double;
+      border-radius: 50%;
+      span {
+        display: block;
+        background: $blue;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        text-align: center;
+        line-height: 29px;
+        font-size: 13px;
+        color: $white;
+      }
+    }
+  }
+  .card-info {
+    padding: 25px 40px 45px 40px;
+    position: fixed;
+    z-index: 1000;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: darken($gray-base, 4%);
+    .card-info-content, h4 {
+      float: left;
+    }
+    h4 {
+      margin-right: 45px;
+      margin-top: 0;
+      font-weight: 600;
+      font-size: 1.3em;
+      @include icon_before('\f05a', $blue, 7px, 1.2em, $fa);
+    }
+    .item {
+      float: left;
+      margin-right: 55px;
+      &.last {
+        margin-right: 0;
+      }
+      .case-details {
+        color: darken($text-default, 10%);
+        strong {
+          color: $white;
+        }
+      }
+    }
+  }
+}
+
+/* Print requests */
+.page-cases-scenes-print-new,
+.page-cases-scenes-print {
+  form#fr-print-request-form {
+    .form-item-docket,
+    .form-item-reason,
+    .form-item-product,
+    .form-item-deliveryType,
+    .form-item-urgency {
+      @include clearfix();
+      .form-type-radio {
+        float: left;
+        margin-right: 15px;
+        color: darken($text-default, 20%);
+      }
+    }
+    .fields-container {
+      @include clearfix();
+      .form-item-courtUrn,
+      .form-item-numberOfCopies,
+      .container-inline-date {
+        float: left;
+        margin-right: 15px;
+        clear: none;
+      }
+      .container-inline-date {
+        .date-padding {
+          padding: 0;
+        }
+        > .form-item {
+          margin-bottom: 0;
+        }
+      }
+    }
+    #edit-actions {
+      padding-top: 10px;
+    }
+  }
+}

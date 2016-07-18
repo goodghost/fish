@@ -1,0 +1,133 @@
+//user styles
+
+/* User login */
+.not-logged-in.page-user {
+  .layer {
+    width: 100%;
+    height: 100%;
+    background: darken($gray-base, 15%);
+    position: absolute;
+    top: 0;
+    z-index: 10;
+    opacity: 0.95;
+    display: none;
+  }
+  #branding {
+    border: none;
+    margin-top: 100px;
+    .breadcrumb,
+    .tabs {
+      display: none;
+    }
+    .branding-inner {
+      text-align: center;
+      margin: 0 auto;
+      max-width: 70%;
+      .welcome-message {
+        max-width: 60%;
+        margin: 0 auto;
+      }
+      img {
+        max-width: 300px;
+        max-height: 150px;
+      }
+    }
+  }
+  #page {
+    background: lighten($gray-base, 3%);
+    margin: 0 auto;
+    min-width: 250px;
+    max-width: 710px;
+    width: 50%;
+    padding: 25px 50px;
+    margin-top: 50px;
+    position: static;
+    .title {
+      display: block;
+      margin-top: -40px;
+      margin-left: -25px;
+      margin: -40px 0 40px -25px;
+    h1.page-title {
+      background: $gray-base;
+      padding-left: 10px;
+      padding-right: 10px;
+      padding-bottom: 5px;
+      font-family: $bebas;
+      font-size: 33px;
+      display: inline;
+      span {
+        color: $link;
+      }
+    }
+    }
+    form#user-login {
+      .form-item-name,
+      .form-item-pass {
+        @include clearfix();
+        label {
+          float: left;
+          width: 20%;
+          min-width: 120px;
+          text-align: right;
+          margin: 0 5px 0 0;
+          text-transform: uppercase;
+          font-weight: 300;
+          line-height: 50px;
+        }
+        input {
+          float: left;
+          width: 63%;
+          height: 45px;
+          background: darken($gray-base, 1%);
+          border-color: lighten($gray-base, 8%);
+          color: $text-default;
+        }
+      }
+      .form-submit {
+        color: $white;
+      }
+      #edit-actions {
+        @inclue clearfix();
+        .form-submit {
+          color: $white;
+          float: right;
+          margin: -25px 100px 0 0;
+        }
+      }
+      .popup-actions {
+        display: none;
+        position: absolute;
+        top: 30%;
+        max-width: 50%;
+        left: 25%;
+        right: 25%;
+        margin: auto;
+        background: darken($gray-base, 7%);
+        z-index: 11;
+        padding: 10px 25px;
+        box-shadow: 3px 3px 5px darken($gray-base, 16%);
+        text-align: center;
+        h3 {
+          text-transform: uppercase;
+        }
+        .terms-and-conditions {
+          color: darken($text-default, 15%);
+          font-size: 14px;
+          margin-bottom: 10px;
+        }
+        .cancel {
+          display: inline;
+          padding: 0 10px;
+          cursor: pointer;
+          color: $link;
+        }
+      }
+      .login {
+        cursor: pointer;
+        @include button('', false);
+        margin: -25px 100px 0 0;
+        float: right;
+      }
+    }
+  }
+}

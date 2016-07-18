@@ -1,0 +1,8 @@
+name = FR http client tests
+description = Functionality related to Fish cases.
+package = Fish Reporting
+core = 7.x
+
+dependencies[] = fr_services
+
+files[] = includes/CaseServiceClient.inc

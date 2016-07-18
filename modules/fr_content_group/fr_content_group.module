@@ -1,0 +1,56 @@
+<?php
+/**
+ * @file
+ * Code for the FR Content Group feature.
+ */
+
+include_once 'fr_content_group.features.inc';
+
+/**
+ * Implements hook_menu_local_tasks_alter().
+ */
+function fr_content_group_menu_local_tasks_alter(&$data, $router_item, $root_path) {
+  switch ($root_path) {
+    case 'admin/groups':
+      $item = menu_get_item('node/add/group');
+      if ($item['access']) {
+        $item['title'] = t('Add new group');
+        $data['actions']['output'][] = array(
+          '#theme' => 'menu_local_action',
+          '#link' => $item,
+        );
+      }
+      break;
+  }
+}
+
+/**
+ * Implements hook_field_extra_fields().
+ */
+function fr_content_group_field_extra_fields() {
+  $extra['node']['group'] = array(
+    'display' => array(
+      'group_content' => array(
+        'label' => t('Group content'),
+        'weight' => 0,
+      ),
+    )
+  );
+
+  return $extra;
+}
+
+/**
+ * Implements hook_node_view().
+ */
+function fr_content_group_node_view($node, $view_mode, $langcode) {
+  if ($node->type == 'group' && $view_mode == 'full') {
+    $view = views_embed_view('user_groups_content', 'default', $node->nid);
+
+    $node->content['group_content'] = array(
+      '#type' => 'item',
+      '#title' => t('Group content'),
+      '#markup' => render($view),
+    );
+  }
+}

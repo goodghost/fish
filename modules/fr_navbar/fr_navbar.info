@@ -1,0 +1,5 @@
+name = FR Navbar
+description = Customizations for navbar module.
+core = 7.x
+package = Fish Reporting
+dependencies[] = navbar

@@ -1,0 +1,12 @@
+name = FR Services
+description = Provides classes for REST client.
+core = 7.x
+package = Fish Reporting
+version = 7.x-1.0
+dependencies[] = ctools
+dependencies[] = http_client
+files[] = includes/HttpClientJSONFormatter.inc
+files[] = includes/ServiceClient.inc
+files[] = includes/ServiceClientAuth.inc
+files[] = includes/ServiceException.inc
+files[] = includes/ServiceClientRequest.inc

@@ -1,0 +1,18 @@
+/* Styles for dashboard blocks */
+
+.node-dashboard-block {
+  .field-type-link-field {
+    a {
+      @include button;
+      float: left;
+      margin: 5px;
+      &:hover{
+        text-decoration: none;
+      }
+    }
+  }
+}
+
+.navbar-icon-dashboard-block:before {
+  content: "\f044" !important;
+}
